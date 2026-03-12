@@ -1,0 +1,19 @@
+[package]
+name = "perch"
+version = "0.1.0"
+authors = ["tontsa28 <miika@tontsa.fi>"]
+license = "GPL-3.0-only"
+repository = "https://github.com/tontsa28/perch"
+readme = "README.md"
+edition = "2024"
+
+[[bin]]
+name = "perch"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+
+[dependencies]
