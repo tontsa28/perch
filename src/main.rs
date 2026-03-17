@@ -1,3 +1,8 @@
+mod uci;
+
+use crate::uci::Uci;
+
 fn main() {
-    println!("Hello, world!");
+    let uci = Uci::new();
+    uci.run();
 }
