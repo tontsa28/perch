@@ -17,3 +17,5 @@ lto = true
 strip = true
 
 [dependencies]
+shakmaty = "^0.30"
+rand = "^0.10"

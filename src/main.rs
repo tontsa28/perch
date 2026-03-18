@@ -4,6 +4,6 @@ mod uci;
 use crate::uci::Uci;
 
 fn main() {
-    let uci = Uci::new();
+    let mut uci = Uci::new();
     uci.run();
 }
