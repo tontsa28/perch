@@ -1,5 +1,6 @@
 mod bitboard;
 mod board;
+mod error;
 mod position;
 mod uci;
 

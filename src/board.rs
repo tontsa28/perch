@@ -1,4 +1,4 @@
-use crate::bitboard::Bitboard;
+use crate::{bitboard::Bitboard, error::Error};
 
 const WHITE_PIECES: &str = "PNBRQK";
 const BLACK_PIECES: &str = "pnbrqk";
@@ -35,9 +35,10 @@ impl Board {
     }
 }
 
-impl From<&str> for Board {
-    fn from(value: &str) -> Self {
-        let pos = value.split_whitespace().next().unwrap();
+impl TryFrom<&str> for Board {
+    type Error = Error;
+
+    fn try_from(pos: &str) -> Result<Self, Self::Error> {
         let mut rank: u8 = 7;
         let mut file: u8 = 0;
 
@@ -47,7 +48,7 @@ impl From<&str> for Board {
         let mut occupied = Bitboard(0);
 
         for c in pos.chars() {
-            if c.is_digit(10) {
+            if c.is_ascii_digit() {
                 file += c.to_digit(10).unwrap() as u8;
             } else if c.is_ascii_alphabetic() {
                 match c {
@@ -63,7 +64,7 @@ impl From<&str> for Board {
                     'r' => pieces[9].0 |= 1u64 << (rank * 8 + file),
                     'q' => pieces[10].0 |= 1u64 << (rank * 8 + file),
                     'k' => pieces[11].0 |= 1u64 << (rank * 8 + file),
-                    _ => panic!("Failed to parse FEN"),
+                    _ => return Err("invalid character in FEN: {c}")?,
                 }
 
                 if WHITE_PIECES.contains(c) {
@@ -81,16 +82,29 @@ impl From<&str> for Board {
             }
         }
 
-        Self {
+        Ok(Self {
             pieces,
             white,
             black,
             occupied,
-        }
+        })
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum Color {
     White,
     Black,
+}
+
+impl TryFrom<&str> for Color {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "w" => Ok(Self::White),
+            "b" => Ok(Self::Black),
+            _ => Err("invalid color")?,
+        }
+    }
 }

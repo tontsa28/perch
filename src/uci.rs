@@ -1,9 +1,12 @@
-use std::{io::stdin, str::FromStr};
+use std::{io::stdin, result::Result as StdResult, str::FromStr};
 
 use rand::{rng, seq::IndexedRandom};
 use shakmaty::{CastlingMode, Chess, Move, Position, fen::Fen, uci::UciMove};
 
-use crate::board::Board;
+use crate::{
+    error::{Error, Result},
+    position::Position as ChessPosition,
+};
 
 pub(crate) struct Uci {
     chess: Chess,
@@ -58,34 +61,32 @@ pub(crate) enum UciCommand {
 }
 
 impl TryFrom<&str> for UciCommand {
-    type Error = &'static str;
+    type Error = Error;
 
-    fn try_from(line: &str) -> Result<Self, Self::Error> {
+    fn try_from(line: &str) -> StdResult<Self, Self::Error> {
         let line = line.trim();
 
-        let cmd = match line {
-            "d" => Self::Display,
-            "help" => Self::Help,
-            "quit" | "exit" => Self::Quit,
+        match line {
+            "d" => Ok(Self::Display),
+            "help" => Ok(Self::Help),
+            "quit" | "exit" => Ok(Self::Quit),
             _ => {
                 if line.starts_with("position") {
                     Self::position(line)
                 } else if line.starts_with("go") {
-                    Self::Go
+                    Ok(Self::Go)
                 } else {
-                    return Err("Unknown command.");
+                    Err("Unknown command.")?
                 }
             }
-        };
-
-        Ok(cmd)
+        }
     }
 }
 
 impl UciCommand {
     const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    fn position(line: &str) -> Self {
+    fn position(line: &str) -> Result<Self> {
         let mut parts = line.split_whitespace();
 
         // Panic if the first part is not position
@@ -106,7 +107,7 @@ impl UciCommand {
             Vec::with_capacity(0)
         };
 
-        dbg!(Board::from(fen_str));
+        dbg!(ChessPosition::try_from(fen_str)?);
 
         let fen = Fen::from_str(fen_str).unwrap();
         let mut position: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
@@ -117,6 +118,6 @@ impl UciCommand {
             position = position.play(m).unwrap();
         }
 
-        Self::Position(position)
+        Ok(Self::Position(position))
     }
 }
