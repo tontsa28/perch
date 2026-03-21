@@ -3,6 +3,8 @@ use std::{io::stdin, str::FromStr};
 use rand::{rng, seq::IndexedRandom};
 use shakmaty::{CastlingMode, Chess, Move, Position, fen::Fen, uci::UciMove};
 
+use crate::board::Board;
+
 pub(crate) struct Uci {
     chess: Chess,
 }
@@ -103,6 +105,8 @@ impl UciCommand {
         } else {
             Vec::with_capacity(0)
         };
+
+        dbg!(Board::from(fen_str));
 
         let fen = Fen::from_str(fen_str).unwrap();
         let mut position: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
