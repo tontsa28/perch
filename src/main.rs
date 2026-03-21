@@ -1,5 +1,6 @@
 mod bitboard;
 mod board;
+mod position;
 mod uci;
 
 use crate::uci::Uci;
