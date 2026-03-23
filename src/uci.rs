@@ -1,11 +1,11 @@
 use std::{io::stdin, result::Result as StdResult, str::FromStr};
 
-use rand::{rng, seq::IndexedRandom};
-use shakmaty::{CastlingMode, Chess, Move, Position, fen::Fen, uci::UciMove};
+use shakmaty::{CastlingMode, Chess, Position, fen::Fen, uci::UciMove};
 
 use crate::{
     error::{Error, Result},
     position::Position as ChessPosition,
+    search::best_move,
 };
 
 pub(crate) struct Uci {
@@ -36,7 +36,7 @@ impl Uci {
                     UciCommand::Help => {
                         println!("Perch is a simple chess engine written in Rust by tontsa28!");
                     }
-                    UciCommand::Go => println!("bestmove {}", self.go()),
+                    UciCommand::Go { depth } => println!("bestmove {}", self.go(depth)),
                     UciCommand::Position(chess) => self.chess = chess,
                     UciCommand::Quit => return,
                 },
@@ -45,17 +45,16 @@ impl Uci {
         }
     }
 
-    fn go(&self) -> String {
-        let legal_moves = self.chess.legal_moves();
-        let mov: &Move = legal_moves.choose(&mut rng()).unwrap();
-        mov.to_uci(CastlingMode::Standard).to_string()
+    fn go(&self, depth: Option<u8>) -> String {
+        let mv = best_move(&self.chess, depth.unwrap_or(5)).unwrap();
+        mv.to_uci(CastlingMode::Standard).to_string()
     }
 }
 
 pub(crate) enum UciCommand {
     Display,
     Help,
-    Go,
+    Go { depth: Option<u8> },
     Position(Chess),
     Quit,
 }
@@ -74,7 +73,7 @@ impl TryFrom<&str> for UciCommand {
                 if line.starts_with("position") {
                     Self::position(line)
                 } else if line.starts_with("go") {
-                    Ok(Self::Go)
+                    Self::go(line)
                 } else {
                     Err("Unknown command.")?
                 }
@@ -107,7 +106,7 @@ impl UciCommand {
             Vec::with_capacity(0)
         };
 
-        dbg!(ChessPosition::try_from(fen_str)?);
+        //dbg!(ChessPosition::try_from(fen_str)?);
 
         let fen = Fen::from_str(fen_str).unwrap();
         let mut position: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
@@ -119,5 +118,18 @@ impl UciCommand {
         }
 
         Ok(Self::Position(position))
+    }
+
+    fn go(line: &str) -> Result<Self> {
+        let mut parts = line.split_whitespace();
+
+        assert_eq!(parts.next(), Some("go"));
+
+        if parts.next() == Some("depth") {
+            let depth = parts.next().map(|s| s.parse::<u8>()).transpose()?;
+            return Ok(Self::Go { depth });
+        }
+
+        Ok(Self::Go { depth: None })
     }
 }

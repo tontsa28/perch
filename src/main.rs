@@ -2,6 +2,7 @@ mod bitboard;
 mod board;
 mod error;
 mod position;
+mod search;
 mod uci;
 
 use crate::uci::Uci;
