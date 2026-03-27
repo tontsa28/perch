@@ -1,14 +1,15 @@
-use std::cmp::max;
-
 use shakmaty::{Chess, Move, Position, Role, Square};
 
+const INF: i32 = 1_073_741_824;
+const MATE: i32 = 536_870_912;
+
 pub(crate) fn best_move(pos: &Chess, depth: u8) -> Option<Move> {
-    let mut best_score = i32::MIN;
+    let mut best_score = -INF;
     let mut best_move = None;
 
     for mv in pos.legal_moves() {
         let new_pos = pos.clone().play(mv).unwrap();
-        let score = -search(&new_pos, depth - 1);
+        let score = -search(&new_pos, depth - 1, -INF, INF);
 
         if score > best_score {
             best_score = score;
@@ -19,18 +20,31 @@ pub(crate) fn best_move(pos: &Chess, depth: u8) -> Option<Move> {
     best_move
 }
 
-fn search(pos: &Chess, depth: u8) -> i32 {
-    if depth == 0 || pos.is_game_over() {
+fn search(pos: &Chess, depth: u8, mut alpha: i32, beta: i32) -> i32 {
+    if depth == 0 {
         return evaluate(pos);
     }
 
     let moves = pos.legal_moves();
-    let mut best = i32::MIN;
+    let mut best = -INF;
+
+    if moves.is_empty() {
+        if pos.is_check() {
+            return -MATE + depth as i32;
+        } else {
+            return 0;
+        }
+    }
 
     for mv in moves {
         let new_pos = pos.clone().play(mv).unwrap();
-        let eval = -search(&new_pos, depth - 1);
-        best = max(best, eval);
+        let eval = -search(&new_pos, depth - 1, -beta, -alpha);
+        best = best.max(eval);
+        alpha = alpha.max(best);
+
+        if alpha >= beta {
+            break;
+        }
     }
 
     best

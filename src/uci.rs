@@ -46,7 +46,7 @@ impl Uci {
     }
 
     fn go(&self, depth: Option<u8>) -> String {
-        let mv = best_move(&self.chess, depth.unwrap_or(5)).unwrap();
+        let mv = best_move(&self.chess, depth.unwrap_or(6)).unwrap();
         mv.to_uci(CastlingMode::Standard).to_string()
     }
 }
