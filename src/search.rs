@@ -3,11 +3,26 @@ use shakmaty::{Chess, Move, Position, Role, Square};
 const INF: i32 = 1_073_741_824;
 const MATE: i32 = 536_870_912;
 
-pub(crate) fn best_move(pos: &Chess, depth: u8) -> Option<Move> {
+pub(crate) fn iterative_deepening(pos: &Chess, depth: u8) -> Option<Move> {
+    let mut best = None;
+
+    for d in 1..=depth {
+        best = best_move(pos, d, best);
+    }
+
+    best
+}
+
+pub(crate) fn best_move(pos: &Chess, depth: u8, prev_best: Option<Move>) -> Option<Move> {
     let mut best_score = -INF;
     let mut best_move = None;
+    let mut moves = pos.legal_moves();
 
-    for mv in pos.legal_moves() {
+    if let Some(best) = prev_best {
+        moves.sort_by_key(|m| if *m == best { 0 } else { 1 });
+    }
+
+    for mv in moves {
         let new_pos = pos.clone().play(mv).unwrap();
         let score = -search(&new_pos, depth - 1, -INF, INF);
 
@@ -22,10 +37,11 @@ pub(crate) fn best_move(pos: &Chess, depth: u8) -> Option<Move> {
 
 fn search(pos: &Chess, depth: u8, mut alpha: i32, beta: i32) -> i32 {
     if depth == 0 {
-        return evaluate(pos);
+        return quiescence(pos, alpha, beta);
     }
 
-    let moves = pos.legal_moves();
+    let mut moves = pos.legal_moves();
+    moves.sort_by_key(|m| !m.is_capture());
     let mut best = -INF;
 
     if moves.is_empty() {
@@ -73,4 +89,30 @@ fn evaluate(pos: &Chess) -> i32 {
     }
 
     score
+}
+
+fn quiescence(pos: &Chess, mut alpha: i32, beta: i32) -> i32 {
+    let stand_pat = evaluate(pos);
+
+    if stand_pat >= beta {
+        return beta;
+    }
+
+    alpha = alpha.max(stand_pat);
+
+    for mv in pos.legal_moves() {
+        if !mv.is_capture() {
+            continue;
+        }
+
+        let new_pos = pos.clone().play(mv).unwrap();
+        let score = -quiescence(&new_pos, -beta, -alpha);
+
+        if score >= beta {
+            return beta;
+        }
+        alpha = alpha.max(score);
+    }
+
+    alpha
 }

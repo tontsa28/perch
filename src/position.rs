@@ -33,14 +33,14 @@ impl Position {
         }
     }
 
-    pub(crate) fn can_castle_kingside(&self) -> bool {
+    fn can_castle_kingside(&self) -> bool {
         match self.turn {
             Color::White => self.castling & Self::WK != 0,
             Color::Black => self.castling & Self::BK != 0,
         }
     }
 
-    pub(crate) fn can_castle_queenside(&self) -> bool {
+    fn can_castle_queenside(&self) -> bool {
         match self.turn {
             Color::White => self.castling & Self::WQ != 0,
             Color::Black => self.castling & Self::BQ != 0,

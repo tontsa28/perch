@@ -5,7 +5,7 @@ use shakmaty::{CastlingMode, Chess, Position, fen::Fen, uci::UciMove};
 use crate::{
     error::{Error, Result},
     position::Position as ChessPosition,
-    search::best_move,
+    search::iterative_deepening,
 };
 
 pub(crate) struct Uci {
@@ -46,7 +46,7 @@ impl Uci {
     }
 
     fn go(&self, depth: Option<u8>) -> String {
-        let mv = best_move(&self.chess, depth.unwrap_or(6)).unwrap();
+        let mv = iterative_deepening(&self.chess, depth.unwrap_or(7)).unwrap();
         mv.to_uci(CastlingMode::Standard).to_string()
     }
 }
