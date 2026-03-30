@@ -46,6 +46,12 @@ impl Position {
             Color::Black => self.castling & Self::BQ != 0,
         }
     }
+
+    fn is_check(&self, color: Color) -> bool {
+        let king_sq = self.board.king_square(color);
+        let attacker = !color;
+        self.board.is_square_attacked(king_sq, attacker)
+    }
 }
 
 impl TryFrom<&str> for Position {

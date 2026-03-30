@@ -1,3 +1,5 @@
+use std::ops::Not;
+
 use crate::{bitboard::Bitboard, error::Error};
 
 const WHITE_PIECES: &str = "PNBRQK";
@@ -32,6 +34,160 @@ impl Board {
             black: Bitboard(0xffff_0000_0000_0000),
             occupied: Bitboard(0xffff_0000_0000_ffff),
         }
+    }
+
+    fn king_bitboard(&self, color: Color) -> Bitboard {
+        match color {
+            Color::White => self.pieces[5],
+            Color::Black => self.pieces[11],
+        }
+    }
+
+    pub(crate) fn king_square(&self, color: Color) -> u8 {
+        self.king_bitboard(color).0.trailing_zeros() as u8
+    }
+
+    #[inline]
+    fn bit_is_set(bb: u64, sq: u8) -> bool {
+        ((bb >> sq) & 1) != 0
+    }
+
+    #[inline]
+    fn sq(file: i8, rank: i8) -> Option<u8> {
+        if (0..8).contains(&file) && (0..8).contains(&rank) {
+            Some((rank as u8) * 8 + (file as u8))
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn file_rank(sq: u8) -> (i8, i8) {
+        ((sq % 8) as i8, (sq / 8) as i8)
+    }
+
+    fn is_attacked_by_pawn(&self, target_sq: u8, by: Color) -> bool {
+        let (f, r) = Self::file_rank(target_sq);
+        let pawns = match by {
+            Color::White => self.pieces[0].0,
+            Color::Black => self.pieces[6].0,
+        };
+
+        let candidate_squares = match by {
+            Color::White => [Self::sq(f - 1, r - 1), Self::sq(f + 1, r - 1)],
+            Color::Black => [Self::sq(f - 1, r + 1), Self::sq(f + 1, r + 1)],
+        };
+
+        candidate_squares
+            .into_iter()
+            .flatten()
+            .any(|sq| Self::bit_is_set(pawns, sq))
+    }
+
+    fn is_attacked_by_knight(&self, target_sq: u8, by: Color) -> bool {
+        let (f, r) = Self::file_rank(target_sq);
+        let knights = match by {
+            Color::White => self.pieces[1].0,
+            Color::Black => self.pieces[7].0,
+        };
+
+        const OFFSETS: [(i8, i8); 8] = [
+            (-2, -1),
+            (-2, 1),
+            (-1, -2),
+            (-1, 2),
+            (1, -2),
+            (1, 2),
+            (2, -1),
+            (2, 1),
+        ];
+
+        OFFSETS.into_iter().any(|(df, dr)| {
+            Self::sq(f + df, r + dr)
+                .map(|sq| Self::bit_is_set(knights, sq))
+                .unwrap_or(false)
+        })
+    }
+
+    fn is_attacked_by_king(&self, target_sq: u8, by: Color) -> bool {
+        let (f, r) = Self::file_rank(target_sq);
+        let king = match by {
+            Color::White => self.pieces[5].0,
+            Color::Black => self.pieces[11].0,
+        };
+
+        for df in -1..=1 {
+            for dr in -1..=1 {
+                if df == 0 && dr == 0 {
+                    continue;
+                }
+
+                if let Some(sq) = Self::sq(f + df, r + dr) {
+                    if Self::bit_is_set(king, sq) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    fn ray_hits_slider(
+        &self,
+        target_sq: u8,
+        by: Color,
+        directions: &[(i8, i8)],
+        diagonal: bool,
+    ) -> bool {
+        let (f0, r0) = Self::file_rank(target_sq);
+        let (bishops, rooks, queens) = match by {
+            Color::White => (self.pieces[2].0, self.pieces[3].0, self.pieces[4].0),
+            Color::Black => (self.pieces[8].0, self.pieces[9].0, self.pieces[10].0),
+        };
+
+        for &(df, dr) in directions {
+            let mut f = f0 + df;
+            let mut r = r0 + dr;
+
+            while let Some(sq) = Self::sq(f, r) {
+                let mask = 1u64 << sq;
+
+                if (self.occupied.0 & mask) != 0 {
+                    if diagonal {
+                        if (bishops & mask) != 0 || (queens & mask) != 0 {
+                            return true;
+                        }
+                    } else if (rooks & mask) != 0 || (queens & mask) != 0 {
+                        return true;
+                    }
+                    break;
+                }
+
+                f += df;
+                r += dr;
+            }
+        }
+
+        false
+    }
+
+    fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
+        const DIAGS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+        self.ray_hits_slider(target_sq, by, &DIAGS, true)
+    }
+
+    fn is_attacked_by_rook_or_queen(&self, target_sq: u8, by: Color) -> bool {
+        const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+        self.ray_hits_slider(target_sq, by, &ORTHO, false)
+    }
+
+    pub(crate) fn is_square_attacked(&self, target_sq: u8, by: Color) -> bool {
+        self.is_attacked_by_pawn(target_sq, by)
+            || self.is_attacked_by_knight(target_sq, by)
+            || self.is_attacked_by_king(target_sq, by)
+            || self.is_attacked_by_bishop_or_queen(target_sq, by)
+            || self.is_attacked_by_rook_or_queen(target_sq, by)
     }
 }
 
@@ -91,10 +247,21 @@ impl TryFrom<&str> for Board {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Color {
     White,
     Black,
+}
+
+impl Not for Color {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Self::White => Self::Black,
+            Self::Black => Self::White,
+        }
+    }
 }
 
 impl TryFrom<&str> for Color {
