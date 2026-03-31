@@ -170,10 +170,50 @@ impl Position {
         }
     }
 
+    fn gen_knight_moves(&self, color: Color, moves: &mut Vec<Move>) {
+        let mut knights = self.board.piece_bitboard(color, PieceKind::Knight).0;
+
+        const OFFSETS: [(i8, i8); 8] = [
+            (-2, -1),
+            (-2, 1),
+            (-1, -2),
+            (-1, 2),
+            (1, -2),
+            (1, 2),
+            (2, -1),
+            (2, 1),
+        ];
+
+        while knights != 0 {
+            let from = knights.trailing_zeros() as u8;
+            knights &= knights - 1;
+
+            let (f, r) = Self::file_rank(from);
+
+            for (df, dr) in OFFSETS {
+                if let Some(to) = Self::sq(f + df, r + dr) {
+                    if self.board.has_friend(to, color) {
+                        continue;
+                    }
+
+                    moves.push(Move {
+                        from,
+                        to,
+                        promotion: None,
+                        is_en_passant: false,
+                        is_castle_kingside: false,
+                        is_castle_queenside: false,
+                    });
+                }
+            }
+        }
+    }
+
     pub(crate) fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
         let mut moves = Vec::with_capacity(64);
 
         self.gen_pawn_moves(self.turn, &mut moves);
+        self.gen_knight_moves(self.turn, &mut moves);
 
         moves
     }
