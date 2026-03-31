@@ -249,12 +249,53 @@ impl Position {
         }
     }
 
+    fn gen_rook_moves(&self, color: Color, moves: &mut Vec<Move>) {
+        let mut rooks = self.board.piece_bitboard(color, PieceKind::Rook).0;
+
+        const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+        while rooks != 0 {
+            let from = rooks.trailing_zeros() as u8;
+            rooks &= rooks - 1;
+
+            let (f0, r0) = Self::file_rank(from);
+
+            for (df, dr) in ORTHO {
+                let mut f = f0 + df;
+                let mut r = r0 + dr;
+
+                while let Some(to) = Self::sq(f, r) {
+                    if self.board.has_friend(to, color) {
+                        break;
+                    }
+
+                    moves.push(Move {
+                        from,
+                        to,
+                        promotion: None,
+                        is_en_passant: false,
+                        is_castle_kingside: false,
+                        is_castle_queenside: false,
+                    });
+
+                    if self.board.has_enemy(to, color) {
+                        break;
+                    }
+
+                    f += df;
+                    r += dr;
+                }
+            }
+        }
+    }
+
     pub(crate) fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
         let mut moves = Vec::with_capacity(64);
 
         self.gen_pawn_moves(self.turn, &mut moves);
         self.gen_knight_moves(self.turn, &mut moves);
         self.gen_bishop_moves(self.turn, &mut moves);
+        self.gen_rook_moves(self.turn, &mut moves);
 
         moves
     }
