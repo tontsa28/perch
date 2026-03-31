@@ -171,8 +171,8 @@ impl Board {
     }
 
     fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
-        const DIAGS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
-        self.ray_hits_slider(target_sq, by, &DIAGS, true)
+        const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+        self.ray_hits_slider(target_sq, by, &DIAG, true)
     }
 
     fn is_attacked_by_rook_or_queen(&self, target_sq: u8, by: Color) -> bool {

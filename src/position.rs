@@ -103,7 +103,7 @@ impl Position {
 
             let (f0, r0) = Self::file_rank(from);
 
-            for (df, dr) in directions {
+            for &(df, dr) in directions {
                 let mut f = f0 + df;
                 let mut r = r0 + dr;
 
@@ -256,14 +256,29 @@ impl Position {
 
     fn gen_bishop_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let bishops = self.board.piece_bitboard(color, PieceKind::Bishop);
-        const DIAGS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
-        self.gen_slider_moves(color, bishops, &DIAGS, moves)
+        const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+        self.gen_slider_moves(color, bishops, &DIAG, moves);
     }
 
     fn gen_rook_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let rooks = self.board.piece_bitboard(color, PieceKind::Rook);
         const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
-        self.gen_slider_moves(color, rooks, &ORTHO, moves)
+        self.gen_slider_moves(color, rooks, &ORTHO, moves);
+    }
+
+    fn gen_queen_moves(&self, color: Color, moves: &mut Vec<Move>) {
+        let queens = self.board.piece_bitboard(color, PieceKind::Queen);
+        const ORTHODIAG: [(i8, i8); 8] = [
+            (-1, -1),
+            (-1, 1),
+            (1, -1),
+            (1, 1),
+            (-1, 0),
+            (1, 0),
+            (0, -1),
+            (0, 1),
+        ];
+        self.gen_slider_moves(color, queens, &ORTHODIAG, moves);
     }
 
     pub(crate) fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
@@ -273,6 +288,7 @@ impl Position {
         self.gen_knight_moves(self.turn, &mut moves);
         self.gen_bishop_moves(self.turn, &mut moves);
         self.gen_rook_moves(self.turn, &mut moves);
+        self.gen_queen_moves(self.turn, &mut moves);
 
         moves
     }
