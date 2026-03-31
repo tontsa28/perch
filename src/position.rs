@@ -2,6 +2,7 @@ use std::num::NonZeroU16;
 use std::result::Result as StdResult;
 
 use crate::{
+    bitboard::Bitboard,
     board::{Board, Color},
     error::Error,
     mov::{Move, PieceKind},
@@ -85,6 +86,50 @@ impl Position {
         let king_sq = self.board.piece_square(color, PieceKind::King);
         let attacker = !color;
         self.board.is_square_attacked(king_sq, attacker)
+    }
+
+    fn gen_slider_moves(
+        &self,
+        color: Color,
+        bitboard: Bitboard,
+        directions: &[(i8, i8)],
+        moves: &mut Vec<Move>,
+    ) {
+        let mut bb = bitboard.0;
+
+        while bb != 0 {
+            let from = bb.trailing_zeros() as u8;
+            bb &= bb - 1;
+
+            let (f0, r0) = Self::file_rank(from);
+
+            for (df, dr) in directions {
+                let mut f = f0 + df;
+                let mut r = r0 + dr;
+
+                while let Some(to) = Self::sq(f, r) {
+                    if self.board.has_friend(to, color) {
+                        break;
+                    }
+
+                    moves.push(Move {
+                        from,
+                        to,
+                        promotion: None,
+                        is_en_passant: false,
+                        is_castle_kingside: false,
+                        is_castle_queenside: false,
+                    });
+
+                    if self.board.has_enemy(to, color) {
+                        break;
+                    }
+
+                    f += df;
+                    r += dr;
+                }
+            }
+        }
     }
 
     fn gen_pawn_moves(&self, color: Color, moves: &mut Vec<Move>) {
@@ -210,83 +255,15 @@ impl Position {
     }
 
     fn gen_bishop_moves(&self, color: Color, moves: &mut Vec<Move>) {
-        let mut bishops = self.board.piece_bitboard(color, PieceKind::Bishop).0;
-
+        let bishops = self.board.piece_bitboard(color, PieceKind::Bishop);
         const DIAGS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
-
-        while bishops != 0 {
-            let from = bishops.trailing_zeros() as u8;
-            bishops &= bishops - 1;
-
-            let (f0, r0) = Self::file_rank(from);
-
-            for (df, dr) in DIAGS {
-                let mut f = f0 + df;
-                let mut r = r0 + dr;
-
-                while let Some(to) = Self::sq(f, r) {
-                    if self.board.has_friend(to, color) {
-                        break;
-                    }
-
-                    moves.push(Move {
-                        from,
-                        to,
-                        promotion: None,
-                        is_en_passant: false,
-                        is_castle_kingside: false,
-                        is_castle_queenside: false,
-                    });
-
-                    if self.board.has_enemy(to, color) {
-                        break;
-                    }
-
-                    f += df;
-                    r += dr;
-                }
-            }
-        }
+        self.gen_slider_moves(color, bishops, &DIAGS, moves)
     }
 
     fn gen_rook_moves(&self, color: Color, moves: &mut Vec<Move>) {
-        let mut rooks = self.board.piece_bitboard(color, PieceKind::Rook).0;
-
+        let rooks = self.board.piece_bitboard(color, PieceKind::Rook);
         const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
-
-        while rooks != 0 {
-            let from = rooks.trailing_zeros() as u8;
-            rooks &= rooks - 1;
-
-            let (f0, r0) = Self::file_rank(from);
-
-            for (df, dr) in ORTHO {
-                let mut f = f0 + df;
-                let mut r = r0 + dr;
-
-                while let Some(to) = Self::sq(f, r) {
-                    if self.board.has_friend(to, color) {
-                        break;
-                    }
-
-                    moves.push(Move {
-                        from,
-                        to,
-                        promotion: None,
-                        is_en_passant: false,
-                        is_castle_kingside: false,
-                        is_castle_queenside: false,
-                    });
-
-                    if self.board.has_enemy(to, color) {
-                        break;
-                    }
-
-                    f += df;
-                    r += dr;
-                }
-            }
-        }
+        self.gen_slider_moves(color, rooks, &ORTHO, moves)
     }
 
     pub(crate) fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
