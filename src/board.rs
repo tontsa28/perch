@@ -64,6 +64,45 @@ impl Board {
         color_offset + kind as usize
     }
 
+    fn ray_hits_slider(
+        &self,
+        target_sq: u8,
+        by: Color,
+        directions: &[(i8, i8)],
+        diagonal: bool,
+    ) -> bool {
+        let (f0, r0) = Self::file_rank(target_sq);
+        let (bishops, rooks, queens) = match by {
+            Color::White => (self.pieces[2].0, self.pieces[3].0, self.pieces[4].0),
+            Color::Black => (self.pieces[8].0, self.pieces[9].0, self.pieces[10].0),
+        };
+
+        for &(df, dr) in directions {
+            let mut f = f0 + df;
+            let mut r = r0 + dr;
+
+            while let Some(sq) = Self::sq(f, r) {
+                let mask = 1u64 << sq;
+
+                if (self.occupied.0 & mask) != 0 {
+                    if diagonal {
+                        if (bishops & mask) != 0 || (queens & mask) != 0 {
+                            return true;
+                        }
+                    } else if (rooks & mask) != 0 || (queens & mask) != 0 {
+                        return true;
+                    }
+                    break;
+                }
+
+                f += df;
+                r += dr;
+            }
+        }
+
+        false
+    }
+
     fn is_attacked_by_pawn(&self, target_sq: u8, by: Color) -> bool {
         let (f, r) = Self::file_rank(target_sq);
         let pawns = match by {
@@ -107,6 +146,16 @@ impl Board {
         })
     }
 
+    fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
+        const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+        self.ray_hits_slider(target_sq, by, &DIAG, true)
+    }
+
+    fn is_attacked_by_rook_or_queen(&self, target_sq: u8, by: Color) -> bool {
+        const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+        self.ray_hits_slider(target_sq, by, &ORTHO, false)
+    }
+
     fn is_attacked_by_king(&self, target_sq: u8, by: Color) -> bool {
         let (f, r) = Self::file_rank(target_sq);
         let king = match by {
@@ -129,55 +178,6 @@ impl Board {
         }
 
         false
-    }
-
-    fn ray_hits_slider(
-        &self,
-        target_sq: u8,
-        by: Color,
-        directions: &[(i8, i8)],
-        diagonal: bool,
-    ) -> bool {
-        let (f0, r0) = Self::file_rank(target_sq);
-        let (bishops, rooks, queens) = match by {
-            Color::White => (self.pieces[2].0, self.pieces[3].0, self.pieces[4].0),
-            Color::Black => (self.pieces[8].0, self.pieces[9].0, self.pieces[10].0),
-        };
-
-        for &(df, dr) in directions {
-            let mut f = f0 + df;
-            let mut r = r0 + dr;
-
-            while let Some(sq) = Self::sq(f, r) {
-                let mask = 1u64 << sq;
-
-                if (self.occupied.0 & mask) != 0 {
-                    if diagonal {
-                        if (bishops & mask) != 0 || (queens & mask) != 0 {
-                            return true;
-                        }
-                    } else if (rooks & mask) != 0 || (queens & mask) != 0 {
-                        return true;
-                    }
-                    break;
-                }
-
-                f += df;
-                r += dr;
-            }
-        }
-
-        false
-    }
-
-    fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
-        const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
-        self.ray_hits_slider(target_sq, by, &DIAG, true)
-    }
-
-    fn is_attacked_by_rook_or_queen(&self, target_sq: u8, by: Color) -> bool {
-        const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
-        self.ray_hits_slider(target_sq, by, &ORTHO, false)
     }
 
     pub(crate) fn piece_bitboard(&self, color: Color, kind: PieceKind) -> Bitboard {

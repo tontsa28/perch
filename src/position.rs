@@ -281,6 +281,115 @@ impl Position {
         self.gen_slider_moves(color, queens, &ORTHODIAG, moves);
     }
 
+    fn gen_king_moves(&self, color: Color, moves: &mut Vec<Move>) {
+        let king = self.board.piece_bitboard(color, PieceKind::King).0;
+
+        if king == 0 {
+            return;
+        }
+
+        let from = king.trailing_zeros() as u8;
+        let (f, r) = Self::file_rank(from);
+
+        for df in -1..=1 {
+            for dr in -1..=1 {
+                if df == 0 && dr == 0 {
+                    continue;
+                }
+
+                if let Some(to) = Self::sq(f + df, r + dr) {
+                    if self.board.has_friend(to, color) {
+                        continue;
+                    }
+
+                    moves.push(Move {
+                        from,
+                        to,
+                        promotion: None,
+                        is_en_passant: false,
+                        is_castle_kingside: false,
+                        is_castle_queenside: false,
+                    });
+                }
+            }
+        }
+
+        match color {
+            Color::White => {
+                if from == 4 {
+                    if self.can_castle_kingside()
+                        && self.board.is_empty(5)
+                        && self.board.is_empty(6)
+                        && self.board.piece_bitboard(Color::White, PieceKind::Rook).0 & (1u64 << 7)
+                            != 0
+                    {
+                        moves.push(Move {
+                            from,
+                            to: 6,
+                            promotion: None,
+                            is_en_passant: false,
+                            is_castle_kingside: true,
+                            is_castle_queenside: false,
+                        });
+                    }
+
+                    if self.can_castle_queenside()
+                        && self.board.is_empty(3)
+                        && self.board.is_empty(2)
+                        && self.board.is_empty(1)
+                        && self.board.piece_bitboard(Color::White, PieceKind::Rook).0 & (1u64 << 0)
+                            != 0
+                    {
+                        moves.push(Move {
+                            from,
+                            to: 2,
+                            promotion: None,
+                            is_en_passant: false,
+                            is_castle_kingside: false,
+                            is_castle_queenside: true,
+                        });
+                    }
+                }
+            }
+            Color::Black => {
+                if from == 60 {
+                    if self.can_castle_kingside()
+                        && self.board.is_empty(61)
+                        && self.board.is_empty(62)
+                        && self.board.piece_bitboard(Color::Black, PieceKind::Rook).0 & (1u64 << 63)
+                            != 0
+                    {
+                        moves.push(Move {
+                            from,
+                            to: 62,
+                            promotion: None,
+                            is_en_passant: false,
+                            is_castle_kingside: true,
+                            is_castle_queenside: false,
+                        });
+                    }
+
+                    if self.can_castle_queenside()
+                        && self.board.is_empty(59)
+                        && self.board.is_empty(58)
+                        && self.board.is_empty(57)
+                        && self.board.piece_bitboard(Color::Black, PieceKind::Rook).0 & (1u64 << 56)
+                            != 0
+                    {
+                        moves.push(Move {
+                            from,
+                            to: 58,
+                            promotion: None,
+                            is_en_passant: false,
+                            is_castle_kingside: false,
+                            is_castle_queenside: true,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     pub(crate) fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
         let mut moves = Vec::with_capacity(64);
 
@@ -289,6 +398,7 @@ impl Position {
         self.gen_bishop_moves(self.turn, &mut moves);
         self.gen_rook_moves(self.turn, &mut moves);
         self.gen_queen_moves(self.turn, &mut moves);
+        self.gen_king_moves(self.turn, &mut moves);
 
         moves
     }
