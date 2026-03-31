@@ -1,6 +1,6 @@
 use std::ops::Not;
 
-use crate::{bitboard::Bitboard, error::Error};
+use crate::{bitboard::Bitboard, error::Error, mov::PieceKind};
 
 const WHITE_PIECES: &str = "PNBRQK";
 const BLACK_PIECES: &str = "pnbrqk";
@@ -36,17 +36,6 @@ impl Board {
         }
     }
 
-    fn king_bitboard(&self, color: Color) -> Bitboard {
-        match color {
-            Color::White => self.pieces[5],
-            Color::Black => self.pieces[11],
-        }
-    }
-
-    pub(crate) fn king_square(&self, color: Color) -> u8 {
-        self.king_bitboard(color).0.trailing_zeros() as u8
-    }
-
     #[inline]
     fn bit_is_set(bb: u64, sq: u8) -> bool {
         ((bb >> sq) & 1) != 0
@@ -64,6 +53,15 @@ impl Board {
     #[inline]
     fn file_rank(sq: u8) -> (i8, i8) {
         ((sq % 8) as i8, (sq / 8) as i8)
+    }
+
+    #[inline]
+    fn piece_index(color: Color, kind: PieceKind) -> usize {
+        let color_offset = match color {
+            Color::White => 0,
+            Color::Black => 6,
+        };
+        color_offset + kind as usize
     }
 
     fn is_attacked_by_pawn(&self, target_sq: u8, by: Color) -> bool {
@@ -182,12 +180,49 @@ impl Board {
         self.ray_hits_slider(target_sq, by, &ORTHO, false)
     }
 
+    pub(crate) fn piece_bitboard(&self, color: Color, kind: PieceKind) -> Bitboard {
+        self.pieces[Self::piece_index(color, kind)]
+    }
+
+    pub(crate) fn color_bitboard(&self, color: Color) -> Bitboard {
+        match color {
+            Color::White => self.white,
+            Color::Black => self.black,
+        }
+    }
+
+    pub(crate) fn occupied_bitboard(&self) -> Bitboard {
+        self.occupied
+    }
+
+    pub(crate) fn piece_square(&self, color: Color, kind: PieceKind) -> u8 {
+        self.piece_bitboard(color, kind).0.trailing_zeros() as u8
+    }
+
     pub(crate) fn is_square_attacked(&self, target_sq: u8, by: Color) -> bool {
         self.is_attacked_by_pawn(target_sq, by)
             || self.is_attacked_by_knight(target_sq, by)
             || self.is_attacked_by_king(target_sq, by)
             || self.is_attacked_by_bishop_or_queen(target_sq, by)
             || self.is_attacked_by_rook_or_queen(target_sq, by)
+    }
+
+    pub(crate) fn is_empty(&self, target_sq: u8) -> bool {
+        assert!(target_sq < 64);
+        let mask = 1u64 << target_sq;
+        (self.occupied.0 & mask) == 0
+    }
+
+    pub(crate) fn has_friend(&self, target_sq: u8, color: Color) -> bool {
+        assert!(target_sq < 64);
+        let mask = 1u64 << target_sq;
+        (self.color_bitboard(color).0 & mask) != 0
+    }
+
+    pub(crate) fn has_enemy(&self, target_sq: u8, color: Color) -> bool {
+        assert!(target_sq < 64);
+        let mask = 1u64 << target_sq;
+        (self.color_bitboard(!color).0 & mask) != 0
     }
 }
 
