@@ -1,21 +1,19 @@
-use std::{io::stdin, result::Result as StdResult, str::FromStr};
-
-use shakmaty::{CastlingMode, Chess, Position, fen::Fen, uci::UciMove};
+use std::{io::stdin, result::Result as StdResult};
 
 use crate::{
     error::{Error, Result},
-    position::Position as ChessPosition,
-    search::iterative_deepening,
+    position::Position,
+    search::best_move,
 };
 
 pub(crate) struct Uci {
-    chess: Chess,
+    chess: Position,
 }
 
 impl Uci {
     pub(crate) fn new() -> Self {
         Self {
-            chess: Chess::new(),
+            chess: Position::new(),
         }
     }
 
@@ -32,7 +30,7 @@ impl Uci {
 
             match UciCommand::try_from(line.as_str()) {
                 Ok(cmd) => match cmd {
-                    UciCommand::Display => println!("{}", self.chess.board()),
+                    UciCommand::Display => println!("{:?}", self.chess.board()),
                     UciCommand::Help => {
                         println!("Perch is a simple chess engine written in Rust by tontsa28!");
                     }
@@ -46,8 +44,8 @@ impl Uci {
     }
 
     fn go(&self, depth: Option<u8>) -> String {
-        let mv = iterative_deepening(&self.chess, depth.unwrap_or(7)).unwrap();
-        mv.to_uci(CastlingMode::Standard).to_string()
+        let mv = best_move(self.chess, depth.unwrap_or(7)).unwrap();
+        mv.to_string()
     }
 }
 
@@ -55,7 +53,7 @@ pub(crate) enum UciCommand {
     Display,
     Help,
     Go { depth: Option<u8> },
-    Position(Chess),
+    Position(Position),
     Quit,
 }
 
@@ -106,15 +104,11 @@ impl UciCommand {
             Vec::with_capacity(0)
         };
 
-        //dbg!(ChessPosition::try_from(fen_str)?);
-
-        let fen = Fen::from_str(fen_str).unwrap();
-        let mut position: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
+        let mut position = Position::try_from(fen_str)?;
 
         for mv in moves {
-            let uci = mv.parse::<UciMove>().unwrap();
-            let m = uci.to_move(&position).unwrap();
-            position = position.play(m).unwrap();
+            let m = position.parse_uci_move(mv).unwrap();
+            position = position.make_move_cloned(m);
         }
 
         Ok(Self::Position(position))

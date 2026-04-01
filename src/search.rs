@@ -1,30 +1,30 @@
-use shakmaty::{Chess, Move, Position, Role, Square};
+use crate::{mov::Move, position::Position};
 
 const INF: i32 = 1_073_741_824;
 const MATE: i32 = 536_870_912;
 
-pub(crate) fn iterative_deepening(pos: &Chess, depth: u8) -> Option<Move> {
-    let mut best = None;
+// pub(crate) fn iterative_deepening(pos: Position, depth: u8) -> Option<Move> {
+//     let mut best = None;
 
-    for d in 1..=depth {
-        best = best_move(pos, d, best);
-    }
+//     for d in 1..=depth {
+//         best = best_move(pos, d, best);
+//     }
 
-    best
-}
+//     best
+// }
 
-pub(crate) fn best_move(pos: &Chess, depth: u8, prev_best: Option<Move>) -> Option<Move> {
+pub(crate) fn best_move(pos: Position, depth: u8) -> Option<Move> {
     let mut best_score = -INF;
     let mut best_move = None;
-    let mut moves = pos.legal_moves();
+    let moves = pos.legal_moves();
 
-    if let Some(best) = prev_best {
-        moves.sort_by_key(|m| if *m == best { 0 } else { 1 });
-    }
+    // if let Some(best) = prev_best {
+    //     moves.sort_by_key(|m| if *m == best { 0 } else { 1 });
+    // }
 
     for mv in moves {
-        let new_pos = pos.clone().play(mv).unwrap();
-        let score = -search(&new_pos, depth - 1, -INF, INF);
+        let new_pos = pos.make_move_cloned(mv);
+        let score = -search(new_pos, depth - 1, -INF, INF);
 
         if score > best_score {
             best_score = score;
@@ -35,17 +35,17 @@ pub(crate) fn best_move(pos: &Chess, depth: u8, prev_best: Option<Move>) -> Opti
     best_move
 }
 
-fn search(pos: &Chess, depth: u8, mut alpha: i32, beta: i32) -> i32 {
+fn search(pos: Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
     if depth == 0 {
-        return quiescence(pos, alpha, beta);
+        return pos.evaluate();
     }
 
-    let mut moves = pos.legal_moves();
-    moves.sort_by_key(|m| !m.is_capture());
+    let moves = pos.legal_moves();
+    //moves.sort_by_key(|m| !m.is_capture());
     let mut best = -INF;
 
     if moves.is_empty() {
-        if pos.is_check() {
+        if pos.is_checkmate() {
             return -MATE + depth as i32;
         } else {
             return 0;
@@ -53,8 +53,8 @@ fn search(pos: &Chess, depth: u8, mut alpha: i32, beta: i32) -> i32 {
     }
 
     for mv in moves {
-        let new_pos = pos.clone().play(mv).unwrap();
-        let eval = -search(&new_pos, depth - 1, -beta, -alpha);
+        let new_pos = pos.make_move_cloned(mv);
+        let eval = -search(new_pos, depth - 1, -beta, -alpha);
         best = best.max(eval);
         alpha = alpha.max(best);
 
@@ -66,53 +66,28 @@ fn search(pos: &Chess, depth: u8, mut alpha: i32, beta: i32) -> i32 {
     best
 }
 
-fn evaluate(pos: &Chess) -> i32 {
-    let mut score = 0;
+// fn quiescence(pos: Position, mut alpha: i32, beta: i32) -> i32 {
+//     let stand_pat = pos.evaluate();
 
-    for sq in Square::ALL {
-        if let Some(piece) = pos.board().piece_at(sq) {
-            let value = match piece.role {
-                Role::Pawn => 100,
-                Role::Knight => 320,
-                Role::Bishop => 330,
-                Role::Rook => 500,
-                Role::Queen => 900,
-                Role::King => 0,
-            };
+//     if stand_pat >= beta {
+//         return beta;
+//     }
 
-            if piece.color == pos.turn() {
-                score += value;
-            } else {
-                score -= value;
-            }
-        }
-    }
+//     alpha = alpha.max(stand_pat);
 
-    score
-}
+//     for mv in pos.legal_moves() {
+//         if !mv.is_capture() {
+//             continue;
+//         }
 
-fn quiescence(pos: &Chess, mut alpha: i32, beta: i32) -> i32 {
-    let stand_pat = evaluate(pos);
+//         let new_pos = pos.make_move_cloned(mv);
+//         let score = -quiescence(new_pos, -beta, -alpha);
 
-    if stand_pat >= beta {
-        return beta;
-    }
+//         if score >= beta {
+//             return beta;
+//         }
+//         alpha = alpha.max(score);
+//     }
 
-    alpha = alpha.max(stand_pat);
-
-    for mv in pos.legal_moves() {
-        if !mv.is_capture() {
-            continue;
-        }
-
-        let new_pos = pos.clone().play(mv).unwrap();
-        let score = -quiescence(&new_pos, -beta, -alpha);
-
-        if score >= beta {
-            return beta;
-        }
-        alpha = alpha.max(score);
-    }
-
-    alpha
-}
+//     alpha
+// }

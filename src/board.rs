@@ -5,7 +5,7 @@ use crate::{bitboard::Bitboard, error::Error, mov::PieceKind};
 const WHITE_PIECES: &str = "PNBRQK";
 const BLACK_PIECES: &str = "pnbrqk";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Board {
     pieces: [Bitboard; 12],
     white: Bitboard,
@@ -276,6 +276,21 @@ impl Board {
         }
 
         self.occupied.0 |= mask;
+    }
+
+    pub(crate) fn evaluate_material(&self) -> i32 {
+        let mut score = 0;
+        let values = [100, 320, 330, 500, 900, 0];
+
+        for (i, &bb) in self.pieces[0..=5].iter().enumerate() {
+            score += (bb.0.count_ones() as i32) * values[i];
+        }
+
+        for (i, &bb) in self.pieces[6..=11].iter().enumerate() {
+            score -= (bb.0.count_ones() as i32) * values[i];
+        }
+
+        score
     }
 }
 

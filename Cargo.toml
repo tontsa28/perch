@@ -17,4 +17,3 @@ lto = true
 strip = true
 
 [dependencies]
-shakmaty = "^0.30"

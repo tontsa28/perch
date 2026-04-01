@@ -4,11 +4,11 @@ use std::result::Result as StdResult;
 use crate::{
     bitboard::Bitboard,
     board::{Board, Color},
-    error::Error,
+    error::{Error, Result},
     mov::{Move, PieceKind},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Position {
     board: Board,
     turn: Color,
@@ -530,6 +530,30 @@ impl Position {
         }
 
         moves
+    }
+
+    pub(crate) fn evaluate(&self) -> i32 {
+        match self.turn {
+            Color::White => self.board.evaluate_material(),
+            Color::Black => -self.board.evaluate_material(),
+        }
+    }
+
+    pub(crate) fn is_checkmate(&self) -> bool {
+        self.is_check(self.turn) && self.legal_moves().is_empty()
+    }
+
+    pub(crate) fn board(&self) -> Board {
+        self.board
+    }
+
+    pub(crate) fn parse_uci_move(&self, s: &str) -> Result<Move> {
+        let raw = Move::try_from(s)?;
+
+        self.legal_moves()
+            .into_iter()
+            .find(|m| m.from == raw.from && m.to == raw.to && m.promotion == raw.promotion)
+            .ok_or_else(|| "Illegal move".into())
     }
 }
 
