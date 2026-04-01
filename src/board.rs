@@ -5,7 +5,7 @@ use crate::{bitboard::Bitboard, error::Error, mov::PieceKind};
 const WHITE_PIECES: &str = "PNBRQK";
 const BLACK_PIECES: &str = "pnbrqk";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Board {
     pieces: [Bitboard; 12],
     white: Bitboard,
@@ -56,7 +56,7 @@ impl Board {
     }
 
     #[inline]
-    fn piece_index(color: Color, kind: PieceKind) -> usize {
+    fn bitboard_index(color: Color, kind: PieceKind) -> usize {
         let color_offset = match color {
             Color::White => 0,
             Color::Black => 6,
@@ -181,7 +181,7 @@ impl Board {
     }
 
     pub(crate) fn piece_bitboard(&self, color: Color, kind: PieceKind) -> Bitboard {
-        self.pieces[Self::piece_index(color, kind)]
+        self.pieces[Self::bitboard_index(color, kind)]
     }
 
     pub(crate) fn color_bitboard(&self, color: Color) -> Bitboard {
@@ -223,6 +223,59 @@ impl Board {
         assert!(target_sq < 64);
         let mask = 1u64 << target_sq;
         (self.color_bitboard(!color).0 & mask) != 0
+    }
+
+    pub(crate) fn piece_at(&self, target_sq: u8) -> Option<(Color, PieceKind)> {
+        assert!(target_sq < 64);
+        let mask = 1u64 << target_sq;
+
+        let kinds = &[
+            PieceKind::Pawn,
+            PieceKind::Knight,
+            PieceKind::Bishop,
+            PieceKind::Rook,
+            PieceKind::Queen,
+            PieceKind::King,
+        ];
+
+        for &color in &[Color::White, Color::Black] {
+            for &kind in kinds {
+                let idx = Self::bitboard_index(color, kind);
+                if (self.pieces[idx].0 & mask) != 0 {
+                    return Some((color, kind));
+                }
+            }
+        }
+
+        None
+    }
+
+    pub(crate) fn remove_piece(&mut self, color: Color, kind: PieceKind, target_sq: u8) {
+        assert!(target_sq < 64);
+        let mask = 1u64 << target_sq;
+        let idx = Self::bitboard_index(color, kind);
+        self.pieces[idx].0 &= !mask;
+
+        match color {
+            Color::White => self.white.0 &= !mask,
+            Color::Black => self.black.0 &= !mask,
+        }
+
+        self.occupied.0 &= !mask;
+    }
+
+    pub(crate) fn add_piece(&mut self, color: Color, kind: PieceKind, target_sq: u8) {
+        assert!(target_sq < 64);
+        let mask = 1u64 << target_sq;
+        let idx = Self::bitboard_index(color, kind);
+        self.pieces[idx].0 |= mask;
+
+        match color {
+            Color::White => self.white.0 |= mask,
+            Color::Black => self.black.0 |= mask,
+        }
+
+        self.occupied.0 |= mask;
     }
 }
 

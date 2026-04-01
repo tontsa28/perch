@@ -8,7 +8,7 @@ use crate::{
     mov::{Move, PieceKind},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Position {
     board: Board,
     turn: Color,
@@ -401,6 +401,121 @@ impl Position {
         self.gen_king_moves(self.turn, &mut moves);
 
         moves
+    }
+
+    pub(crate) fn make_move_cloned(&self, mv: Move) -> Self {
+        let mut next = self.clone();
+        let us = next.turn;
+        let them = !us;
+
+        let (moving_color, moving_kind) = next.board.piece_at(mv.from).unwrap();
+        assert_eq!(moving_color, us);
+
+        let mut is_capture = false;
+
+        if mv.is_en_passant {
+            let cap_sq = match us {
+                Color::White => mv.to - 8,
+                Color::Black => mv.to + 8,
+            };
+
+            if let Some((cap_color, cap_kind)) = next.board.piece_at(cap_sq) {
+                assert!(cap_color == them && cap_kind == PieceKind::Pawn);
+                next.board.remove_piece(cap_color, cap_kind, cap_sq);
+                is_capture = true;
+            }
+        } else if let Some((cap_color, cap_kind)) = next.board.piece_at(mv.to) {
+            next.board.remove_piece(cap_color, cap_kind, mv.to);
+            is_capture = true;
+        }
+
+        next.board.remove_piece(us, moving_kind, mv.from);
+        let placed_kind = mv.promotion.unwrap_or(moving_kind);
+        next.board.add_piece(us, placed_kind, mv.to);
+
+        if mv.is_castle_kingside {
+            match us {
+                Color::White => {
+                    next.board.remove_piece(Color::White, PieceKind::Rook, 7);
+                    next.board.add_piece(Color::White, PieceKind::Rook, 5);
+                }
+                Color::Black => {
+                    next.board.remove_piece(Color::White, PieceKind::Rook, 63);
+                    next.board.add_piece(Color::White, PieceKind::Rook, 61);
+                }
+            }
+        } else if mv.is_castle_queenside {
+            match us {
+                Color::White => {
+                    next.board.remove_piece(Color::White, PieceKind::Rook, 0);
+                    next.board.add_piece(Color::White, PieceKind::Rook, 3);
+                }
+                Color::Black => {
+                    next.board.remove_piece(Color::White, PieceKind::Rook, 56);
+                    next.board.add_piece(Color::White, PieceKind::Rook, 59);
+                }
+            }
+        }
+
+        match us {
+            Color::White => {
+                if moving_kind == PieceKind::King {
+                    next.castling &= !(Self::WK | Self::WQ);
+                }
+                if moving_kind == PieceKind::Rook {
+                    if mv.from == 7 {
+                        next.castling &= !Self::WK;
+                    } else if mv.from == 0 {
+                        next.castling &= !Self::WQ;
+                    }
+                }
+            }
+            Color::Black => {
+                if moving_kind == PieceKind::King {
+                    next.castling &= !(Self::BK | Self::BQ);
+                }
+                if moving_kind == PieceKind::Rook {
+                    if mv.from == 63 {
+                        next.castling &= !Self::BK;
+                    } else if mv.from == 56 {
+                        next.castling &= !Self::BQ;
+                    }
+                }
+            }
+        }
+
+        if !mv.is_en_passant {
+            match mv.to {
+                7 => next.castling &= !Self::WK,
+                0 => next.castling &= !Self::WQ,
+                63 => next.castling &= !Self::BK,
+                56 => next.castling &= !Self::BQ,
+                _ => {}
+            }
+        }
+
+        next.en_passant = None;
+        if moving_kind == PieceKind::Pawn {
+            let delta = (mv.to as i16) - (mv.from as i16);
+            if delta == 16 || delta == -16 {
+                let ep = ((mv.from as u16 + mv.to as u16) / 2) as u8;
+                next.en_passant = Some(ep);
+            }
+        }
+
+        if moving_kind == PieceKind::Pawn || is_capture {
+            next.halfmoves = 0;
+        } else {
+            next.halfmoves = next.halfmoves.saturating_add(1);
+        }
+
+        if us == Color::Black {
+            next.fullmoves = next.fullmoves.saturating_add(1);
+        }
+
+        next.turn = them;
+
+        next
     }
 }
 

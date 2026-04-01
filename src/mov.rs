@@ -8,7 +8,7 @@ pub(crate) struct Move {
 }
 
 #[repr(usize)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum PieceKind {
     Pawn = 0,
     Knight = 1,
