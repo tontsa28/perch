@@ -390,7 +390,7 @@ impl Position {
         }
     }
 
-    pub(crate) fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
+    fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
         let mut moves = Vec::with_capacity(64);
 
         self.gen_pawn_moves(self.turn, &mut moves);
@@ -516,6 +516,20 @@ impl Position {
         next.turn = them;
 
         next
+    }
+
+    pub(crate) fn legal_moves(&self) -> Vec<Move> {
+        let mut moves = Vec::new();
+        let pseudo = self.gen_pseudo_legal_moves();
+
+        for mv in pseudo {
+            let pos = self.make_move_cloned(mv);
+            if !pos.is_check(self.turn) {
+                moves.push(mv);
+            }
+        }
+
+        moves
     }
 }
 

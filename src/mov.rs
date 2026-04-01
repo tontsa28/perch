@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Move {
     pub(crate) from: u8,
     pub(crate) to: u8,
