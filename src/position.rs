@@ -440,8 +440,8 @@ impl Position {
                     next.board.add_piece(Color::White, PieceKind::Rook, 5);
                 }
                 Color::Black => {
-                    next.board.remove_piece(Color::White, PieceKind::Rook, 63);
-                    next.board.add_piece(Color::White, PieceKind::Rook, 61);
+                    next.board.remove_piece(Color::Black, PieceKind::Rook, 63);
+                    next.board.add_piece(Color::Black, PieceKind::Rook, 61);
                 }
             }
         } else if mv.is_castle_queenside {
@@ -451,8 +451,8 @@ impl Position {
                     next.board.add_piece(Color::White, PieceKind::Rook, 3);
                 }
                 Color::Black => {
-                    next.board.remove_piece(Color::White, PieceKind::Rook, 56);
-                    next.board.add_piece(Color::White, PieceKind::Rook, 59);
+                    next.board.remove_piece(Color::Black, PieceKind::Rook, 56);
+                    next.board.add_piece(Color::Black, PieceKind::Rook, 59);
                 }
             }
         }

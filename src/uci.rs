@@ -44,7 +44,7 @@ impl Uci {
     }
 
     fn go(&self, depth: Option<u8>) -> String {
-        let mv = best_move(self.chess, depth.unwrap_or(7)).unwrap();
+        let mv = best_move(self.chess, depth.unwrap_or(6)).unwrap();
         mv.to_string()
     }
 }
