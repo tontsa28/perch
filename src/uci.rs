@@ -3,7 +3,7 @@ use std::{io::stdin, result::Result as StdResult};
 use crate::{
     error::{Error, Result},
     position::Position,
-    search::best_move,
+    search::iterative_deepening,
 };
 
 pub(crate) struct Uci {
@@ -44,7 +44,7 @@ impl Uci {
     }
 
     fn go(&self, depth: Option<u8>) -> String {
-        let mv = best_move(self.chess, depth.unwrap_or(6)).unwrap();
+        let mv = iterative_deepening(self.chess, depth.unwrap_or(6)).unwrap();
         mv.to_string()
     }
 }

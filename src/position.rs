@@ -555,6 +555,10 @@ impl Position {
             .find(|m| m.from == raw.from && m.to == raw.to && m.promotion == raw.promotion)
             .ok_or_else(|| "Illegal move".into())
     }
+
+    pub(crate) fn is_capture(&self, mv: Move) -> bool {
+        mv.is_en_passant || self.board.has_enemy(mv.to, self.turn)
+    }
 }
 
 impl TryFrom<&str> for Position {

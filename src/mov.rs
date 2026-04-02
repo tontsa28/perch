@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::error::Error;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Move {
     pub(crate) from: u8,
     pub(crate) to: u8,
@@ -58,6 +58,10 @@ impl Move {
             b'q' => Some(PieceKind::Queen),
             _ => None,
         }
+    }
+
+    pub(crate) fn is_promotion(&self) -> bool {
+        self.promotion.is_some()
     }
 }
 

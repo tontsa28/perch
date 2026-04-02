@@ -3,24 +3,24 @@ use crate::{mov::Move, position::Position};
 const INF: i32 = 1_073_741_824;
 const MATE: i32 = 536_870_912;
 
-// pub(crate) fn iterative_deepening(pos: Position, depth: u8) -> Option<Move> {
-//     let mut best = None;
+pub(crate) fn iterative_deepening(pos: Position, depth: u8) -> Option<Move> {
+    let mut best = None;
 
-//     for d in 1..=depth {
-//         best = best_move(pos, d, best);
-//     }
+    for d in 1..=depth {
+        best = best_move(pos, d, best);
+    }
 
-//     best
-// }
+    best
+}
 
-pub(crate) fn best_move(pos: Position, depth: u8) -> Option<Move> {
+pub(crate) fn best_move(pos: Position, depth: u8, prev_best: Option<Move>) -> Option<Move> {
     let mut best_score = -INF;
     let mut best_move = None;
-    let moves = pos.legal_moves();
+    let mut moves = pos.legal_moves();
 
-    // if let Some(best) = prev_best {
-    //     moves.sort_by_key(|m| if *m == best { 0 } else { 1 });
-    // }
+    if let Some(best) = prev_best {
+        moves.sort_by_key(|m| if *m == best { 0 } else { 1 });
+    }
 
     for mv in moves {
         let new_pos = pos.make_move_cloned(mv);
@@ -40,8 +40,16 @@ fn search(pos: Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
         return pos.evaluate();
     }
 
-    let moves = pos.legal_moves();
-    //moves.sort_by_key(|m| !m.is_capture());
+    let mut moves = pos.legal_moves();
+    moves.sort_by_key(|m| {
+        if m.is_promotion() {
+            0
+        } else if pos.is_capture(*m) {
+            1
+        } else {
+            2
+        }
+    });
     let mut best = -INF;
 
     if moves.is_empty() {
