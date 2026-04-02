@@ -3,7 +3,7 @@ use crate::{mov::Move, position::Position};
 const INF: i32 = 1_073_741_824;
 const MATE: i32 = 536_870_912;
 
-pub(crate) fn iterative_deepening(pos: Position, depth: u8) -> Option<Move> {
+pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move> {
     let mut best = None;
 
     for d in 1..=depth {
@@ -13,7 +13,7 @@ pub(crate) fn iterative_deepening(pos: Position, depth: u8) -> Option<Move> {
     best
 }
 
-pub(crate) fn best_move(pos: Position, depth: u8, prev_best: Option<Move>) -> Option<Move> {
+pub(crate) fn best_move(pos: &mut Position, depth: u8, prev_best: Option<Move>) -> Option<Move> {
     let mut best_score = -INF;
     let mut best_move = None;
     let mut moves = pos.legal_moves();
@@ -23,8 +23,9 @@ pub(crate) fn best_move(pos: Position, depth: u8, prev_best: Option<Move>) -> Op
     }
 
     for mv in moves {
-        let new_pos = pos.make_move_cloned(mv);
-        let score = -search(new_pos, depth - 1, -INF, INF);
+        let undo = pos.make_move(mv);
+        let score = -search(pos, depth - 1, -INF, INF);
+        pos.unmake_move(mv, undo);
 
         if score > best_score {
             best_score = score;
@@ -35,7 +36,7 @@ pub(crate) fn best_move(pos: Position, depth: u8, prev_best: Option<Move>) -> Op
     best_move
 }
 
-fn search(pos: Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
+fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
     if depth == 0 {
         return pos.evaluate();
     }
@@ -53,7 +54,7 @@ fn search(pos: Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
     let mut best = -INF;
 
     if moves.is_empty() {
-        if pos.is_checkmate() {
+        if pos.is_check(pos.turn()) {
             return -MATE + depth as i32;
         } else {
             return 0;
@@ -61,8 +62,10 @@ fn search(pos: Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
     }
 
     for mv in moves {
-        let new_pos = pos.make_move_cloned(mv);
-        let eval = -search(new_pos, depth - 1, -beta, -alpha);
+        let undo = pos.make_move(mv);
+        let eval = -search(pos, depth - 1, -beta, -alpha);
+        pos.unmake_move(mv, undo);
+
         best = best.max(eval);
         alpha = alpha.max(best);
 

@@ -43,8 +43,8 @@ impl Uci {
         }
     }
 
-    fn go(&self, depth: Option<u8>) -> String {
-        let mv = iterative_deepening(self.chess, depth.unwrap_or(6)).unwrap();
+    fn go(&mut self, depth: Option<u8>) -> String {
+        let mv = iterative_deepening(&mut self.chess, depth.unwrap_or(6)).unwrap();
         mv.to_string()
     }
 }
@@ -108,7 +108,7 @@ impl UciCommand {
 
         for mv in moves {
             let m = position.parse_uci_move(mv).unwrap();
-            position = position.make_move_cloned(m);
+            position.make_move(m);
         }
 
         Ok(Self::Position(position))

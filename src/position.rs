@@ -5,7 +5,7 @@ use crate::{
     bitboard::Bitboard,
     board::{Board, Color},
     error::{Error, Result},
-    mov::{Move, PieceKind},
+    mov::{Move, PieceKind, Undo},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -80,12 +80,6 @@ impl Position {
             Color::White => self.castling & Self::WQ != 0,
             Color::Black => self.castling & Self::BQ != 0,
         }
-    }
-
-    fn is_check(&self, color: Color) -> bool {
-        let king_sq = self.board.piece_square(color, PieceKind::King);
-        let attacker = !color;
-        self.board.is_square_attacked(king_sq, attacker)
     }
 
     fn gen_slider_moves(
@@ -403,12 +397,31 @@ impl Position {
         moves
     }
 
-    pub(crate) fn make_move_cloned(&self, mv: Move) -> Self {
-        let mut next = self.clone();
-        let us = next.turn;
-        let them = !us;
+    pub(crate) fn board(&self) -> Board {
+        self.board
+    }
 
-        let (moving_color, moving_kind) = next.board.piece_at(mv.from).unwrap();
+    pub(crate) fn turn(&self) -> Color {
+        self.turn
+    }
+
+    pub(crate) fn is_check(&self, color: Color) -> bool {
+        let king_sq = self.board.piece_square(color, PieceKind::King);
+        let attacker = !color;
+        self.board.is_square_attacked(king_sq, attacker)
+    }
+
+    pub(crate) fn make_move(&mut self, mv: Move) -> Undo {
+        let us = self.turn;
+        let mut undo = Undo {
+            captured: None,
+            castling: self.castling,
+            en_passant: self.en_passant,
+            halfmoves: self.halfmoves,
+            fullmoves: self.fullmoves,
+        };
+
+        let (moving_color, moving_kind) = self.board.piece_at(mv.from).unwrap();
         assert_eq!(moving_color, us);
 
         let mut is_capture = false;
@@ -419,40 +432,44 @@ impl Position {
                 Color::Black => mv.to + 8,
             };
 
-            if let Some((cap_color, cap_kind)) = next.board.piece_at(cap_sq) {
-                assert!(cap_color == them && cap_kind == PieceKind::Pawn);
-                next.board.remove_piece(cap_color, cap_kind, cap_sq);
+            if let Some((cap_color, cap_kind)) = self.board.piece_at(cap_sq) {
+                assert_eq!(cap_color, !us);
+                assert_eq!(cap_kind, PieceKind::Pawn);
+                self.board.remove_piece(cap_color, cap_kind, cap_sq);
+                undo.captured = Some((cap_color, cap_kind, cap_sq));
                 is_capture = true;
             }
-        } else if let Some((cap_color, cap_kind)) = next.board.piece_at(mv.to) {
-            next.board.remove_piece(cap_color, cap_kind, mv.to);
+        } else if let Some((cap_color, cap_kind)) = self.board.piece_at(mv.to) {
+            assert_eq!(cap_color, !us);
+            self.board.remove_piece(cap_color, cap_kind, mv.to);
+            undo.captured = Some((cap_color, cap_kind, mv.to));
             is_capture = true;
         }
 
-        next.board.remove_piece(us, moving_kind, mv.from);
+        self.board.remove_piece(us, moving_kind, mv.from);
         let placed_kind = mv.promotion.unwrap_or(moving_kind);
-        next.board.add_piece(us, placed_kind, mv.to);
+        self.board.add_piece(us, placed_kind, mv.to);
 
         if mv.is_castle_kingside {
             match us {
                 Color::White => {
-                    next.board.remove_piece(Color::White, PieceKind::Rook, 7);
-                    next.board.add_piece(Color::White, PieceKind::Rook, 5);
+                    self.board.remove_piece(Color::White, PieceKind::Rook, 7);
+                    self.board.add_piece(Color::White, PieceKind::Rook, 5);
                 }
                 Color::Black => {
-                    next.board.remove_piece(Color::Black, PieceKind::Rook, 63);
-                    next.board.add_piece(Color::Black, PieceKind::Rook, 61);
+                    self.board.remove_piece(Color::Black, PieceKind::Rook, 63);
+                    self.board.add_piece(Color::Black, PieceKind::Rook, 61);
                 }
             }
         } else if mv.is_castle_queenside {
             match us {
                 Color::White => {
-                    next.board.remove_piece(Color::White, PieceKind::Rook, 0);
-                    next.board.add_piece(Color::White, PieceKind::Rook, 3);
+                    self.board.remove_piece(Color::White, PieceKind::Rook, 0);
+                    self.board.add_piece(Color::White, PieceKind::Rook, 3);
                 }
                 Color::Black => {
-                    next.board.remove_piece(Color::Black, PieceKind::Rook, 56);
-                    next.board.add_piece(Color::Black, PieceKind::Rook, 59);
+                    self.board.remove_piece(Color::Black, PieceKind::Rook, 56);
+                    self.board.add_piece(Color::Black, PieceKind::Rook, 59);
                 }
             }
         }
@@ -460,25 +477,25 @@ impl Position {
         match us {
             Color::White => {
                 if moving_kind == PieceKind::King {
-                    next.castling &= !(Self::WK | Self::WQ);
+                    self.castling &= !(Self::WK | Self::WQ);
                 }
                 if moving_kind == PieceKind::Rook {
                     if mv.from == 7 {
-                        next.castling &= !Self::WK;
+                        self.castling &= !Self::WK;
                     } else if mv.from == 0 {
-                        next.castling &= !Self::WQ;
+                        self.castling &= !Self::WQ;
                     }
                 }
             }
             Color::Black => {
                 if moving_kind == PieceKind::King {
-                    next.castling &= !(Self::BK | Self::BQ);
+                    self.castling &= !(Self::BK | Self::BQ);
                 }
                 if moving_kind == PieceKind::Rook {
                     if mv.from == 63 {
-                        next.castling &= !Self::BK;
+                        self.castling &= !Self::BK;
                     } else if mv.from == 56 {
-                        next.castling &= !Self::BQ;
+                        self.castling &= !Self::BQ;
                     }
                 }
             }
@@ -486,47 +503,97 @@ impl Position {
 
         if !mv.is_en_passant {
             match mv.to {
-                7 => next.castling &= !Self::WK,
-                0 => next.castling &= !Self::WQ,
-                63 => next.castling &= !Self::BK,
-                56 => next.castling &= !Self::BQ,
+                7 => self.castling &= !Self::WK,
+                0 => self.castling &= !Self::WQ,
+                63 => self.castling &= !Self::BK,
+                56 => self.castling &= !Self::BQ,
                 _ => {}
             }
         }
 
-        next.en_passant = None;
+        self.en_passant = None;
         if moving_kind == PieceKind::Pawn {
             let delta = (mv.to as i16) - (mv.from as i16);
             if delta == 16 || delta == -16 {
                 let ep = ((mv.from as u16 + mv.to as u16) / 2) as u8;
-                next.en_passant = Some(ep);
+                self.en_passant = Some(ep);
             }
         }
 
         if moving_kind == PieceKind::Pawn || is_capture {
-            next.halfmoves = 0;
+            self.halfmoves = 0;
         } else {
-            next.halfmoves = next.halfmoves.saturating_add(1);
+            self.halfmoves = self.halfmoves.saturating_add(1);
         }
 
         if us == Color::Black {
-            next.fullmoves = next.fullmoves.saturating_add(1);
+            self.fullmoves = self.fullmoves.saturating_add(1);
         }
 
-        next.turn = them;
+        self.turn = !self.turn;
 
-        next
+        undo
     }
 
-    pub(crate) fn legal_moves(&self) -> Vec<Move> {
+    pub(crate) fn unmake_move(&mut self, mv: Move, undo: Undo) {
+        self.turn = !self.turn;
+        let us = self.turn;
+
+        self.fullmoves = undo.fullmoves;
+        self.halfmoves = undo.halfmoves;
+        self.en_passant = undo.en_passant;
+        self.castling = undo.castling;
+
+        if mv.is_castle_kingside {
+            match us {
+                Color::White => {
+                    self.board.remove_piece(Color::White, PieceKind::Rook, 5);
+                    self.board.add_piece(Color::White, PieceKind::Rook, 7);
+                }
+                Color::Black => {
+                    self.board.remove_piece(Color::Black, PieceKind::Rook, 61);
+                    self.board.add_piece(Color::Black, PieceKind::Rook, 63);
+                }
+            }
+        } else if mv.is_castle_queenside {
+            match us {
+                Color::White => {
+                    self.board.remove_piece(Color::White, PieceKind::Rook, 3);
+                    self.board.add_piece(Color::White, PieceKind::Rook, 0);
+                }
+                Color::Black => {
+                    self.board.remove_piece(Color::Black, PieceKind::Rook, 59);
+                    self.board.add_piece(Color::Black, PieceKind::Rook, 56);
+                }
+            }
+        }
+
+        if let Some(promoted_to) = mv.promotion {
+            self.board.remove_piece(us, promoted_to, mv.to);
+            self.board.add_piece(us, PieceKind::Pawn, mv.from);
+        } else {
+            let (c, k) = self.board.piece_at(mv.to).unwrap();
+            assert_eq!(c, us);
+            self.board.remove_piece(us, k, mv.to);
+            self.board.add_piece(us, k, mv.from);
+        }
+
+        if let Some((cap_color, cap_kind, cap_sq)) = undo.captured {
+            self.board.add_piece(cap_color, cap_kind, cap_sq);
+        }
+    }
+
+    pub(crate) fn legal_moves(&mut self) -> Vec<Move> {
         let mut moves = Vec::new();
         let pseudo = self.gen_pseudo_legal_moves();
+        let us = self.turn;
 
         for mv in pseudo {
-            let pos = self.make_move_cloned(mv);
-            if !pos.is_check(self.turn) {
+            let undo = self.make_move(mv);
+            if !self.is_check(us) {
                 moves.push(mv);
             }
+            self.unmake_move(mv, undo);
         }
 
         moves
@@ -539,15 +606,7 @@ impl Position {
         }
     }
 
-    pub(crate) fn is_checkmate(&self) -> bool {
-        self.is_check(self.turn) && self.legal_moves().is_empty()
-    }
-
-    pub(crate) fn board(&self) -> Board {
-        self.board
-    }
-
-    pub(crate) fn parse_uci_move(&self, s: &str) -> Result<Move> {
+    pub(crate) fn parse_uci_move(&mut self, s: &str) -> Result<Move> {
         let raw = Move::try_from(s)?;
 
         self.legal_moves()

@@ -191,10 +191,6 @@ impl Board {
         }
     }
 
-    pub(crate) fn occupied_bitboard(&self) -> Bitboard {
-        self.occupied
-    }
-
     pub(crate) fn piece_square(&self, color: Color, kind: PieceKind) -> u8 {
         self.piece_bitboard(color, kind).0.trailing_zeros() as u8
     }

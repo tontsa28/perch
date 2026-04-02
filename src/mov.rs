@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::{fmt::Display, num::NonZeroU16};
 
-use crate::error::Error;
+use crate::{board::Color, error::Error};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Move {
@@ -115,6 +115,15 @@ impl TryFrom<&str> for Move {
             is_castle_queenside: false,
         })
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Undo {
+    pub(crate) captured: Option<(Color, PieceKind, u8)>,
+    pub(crate) castling: u8,
+    pub(crate) en_passant: Option<u8>,
+    pub(crate) halfmoves: u16,
+    pub(crate) fullmoves: NonZeroU16,
 }
 
 #[repr(usize)]
