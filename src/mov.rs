@@ -72,11 +72,10 @@ impl Display for Move {
 
         write!(f, "{ff}{fr}{tf}{tr}")?;
 
-        if let Some(p) = self.promotion {
-            if let Some(c) = Self::promo_char(p) {
+        if let Some(p) = self.promotion
+            && let Some(c) = Self::promo_char(p) {
                 write!(f, "{c}")?;
             }
-        }
 
         Ok(())
     }

@@ -169,11 +169,10 @@ impl Board {
                     continue;
                 }
 
-                if let Some(sq) = Self::sq(f + df, r + dr) {
-                    if Self::bit_is_set(king, sq) {
+                if let Some(sq) = Self::sq(f + df, r + dr)
+                    && Self::bit_is_set(king, sq) {
                         return true;
                     }
-                }
             }
         }
 

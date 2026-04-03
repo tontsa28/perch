@@ -140,8 +140,8 @@ impl Position {
 
             let (f, r) = Self::file_rank(from);
 
-            if let Some(one_step) = Self::sq(f, r + push_delta) {
-                if self.board.is_empty(one_step) {
+            if let Some(one_step) = Self::sq(f, r + push_delta)
+                && self.board.is_empty(one_step) {
                     let (_, to_rank) = Self::file_rank(one_step);
 
                     if to_rank == promo_rank {
@@ -156,9 +156,9 @@ impl Position {
                             is_castle_queenside: false,
                         });
 
-                        if r == start_rank {
-                            if let Some(two_step) = Self::sq(f, r + 2 * push_delta) {
-                                if self.board.is_empty(two_step) {
+                        if r == start_rank
+                            && let Some(two_step) = Self::sq(f, r + 2 * push_delta)
+                                && self.board.is_empty(two_step) {
                                     moves.push(Move {
                                         from,
                                         to: two_step,
@@ -168,11 +168,8 @@ impl Position {
                                         is_castle_queenside: false,
                                     });
                                 }
-                            }
-                        }
                     }
                 }
-            }
 
             for df in [-1i8, 1i8] {
                 if let Some(to) = Self::sq(f + df, r + push_delta) {
@@ -625,7 +622,7 @@ impl TryFrom<&str> for Position {
 
     fn try_from(value: &str) -> StdResult<Self, Self::Error> {
         let parts: Vec<&str> = value.split_whitespace().collect();
-        let pos_str = *parts.get(0).unwrap();
+        let pos_str = *parts.first().unwrap();
         let turn_str = *parts.get(1).unwrap();
         let castling_str = *parts.get(2).unwrap();
         let en_passant_str = *parts.get(3).unwrap();
