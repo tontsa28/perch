@@ -34,7 +34,7 @@ pub(crate) fn best_move(
 
     for mv in moves {
         let undo = pos.make_move(mv);
-        let score = -search(pos, depth - 1, -INF, INF);
+        let score = -search(pos, depth - 1, -INF, INF, 1);
         pos.unmake_move(mv, undo);
 
         if score > best_score {
@@ -46,7 +46,7 @@ pub(crate) fn best_move(
     (best_move, best_score)
 }
 
-fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
+fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) -> i32 {
     if depth == 0 {
         return pos.evaluate();
     }
@@ -61,19 +61,20 @@ fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32) -> i32 {
             2
         }
     });
-    let mut best = -INF;
 
     if moves.is_empty() {
         if pos.is_check(pos.turn()) {
-            return -MATE + depth as i32;
+            return -MATE + ply;
         } else {
-            return -10;
+            return 0;
         }
     }
 
+    let mut best = -INF;
+
     for mv in moves {
         let undo = pos.make_move(mv);
-        let eval = -search(pos, depth - 1, -beta, -alpha);
+        let eval = -search(pos, depth - 1, -beta, -alpha, ply + 1);
         pos.unmake_move(mv, undo);
 
         best = best.max(eval);
