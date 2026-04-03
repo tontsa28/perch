@@ -141,35 +141,37 @@ impl Position {
             let (f, r) = Self::file_rank(from);
 
             if let Some(one_step) = Self::sq(f, r + push_delta)
-                && self.board.is_empty(one_step) {
-                    let (_, to_rank) = Self::file_rank(one_step);
+                && self.board.is_empty(one_step)
+            {
+                let (_, to_rank) = Self::file_rank(one_step);
 
-                    if to_rank == promo_rank {
-                        Self::push_promotion_set(moves, from, one_step, false);
-                    } else {
+                if to_rank == promo_rank {
+                    Self::push_promotion_set(moves, from, one_step, false);
+                } else {
+                    moves.push(Move {
+                        from,
+                        to: one_step,
+                        promotion: None,
+                        is_en_passant: false,
+                        is_castle_kingside: false,
+                        is_castle_queenside: false,
+                    });
+
+                    if r == start_rank
+                        && let Some(two_step) = Self::sq(f, r + 2 * push_delta)
+                        && self.board.is_empty(two_step)
+                    {
                         moves.push(Move {
                             from,
-                            to: one_step,
+                            to: two_step,
                             promotion: None,
                             is_en_passant: false,
                             is_castle_kingside: false,
                             is_castle_queenside: false,
                         });
-
-                        if r == start_rank
-                            && let Some(two_step) = Self::sq(f, r + 2 * push_delta)
-                                && self.board.is_empty(two_step) {
-                                    moves.push(Move {
-                                        from,
-                                        to: two_step,
-                                        promotion: None,
-                                        is_en_passant: false,
-                                        is_castle_kingside: false,
-                                        is_castle_queenside: false,
-                                    });
-                                }
                     }
                 }
+            }
 
             for df in [-1i8, 1i8] {
                 if let Some(to) = Self::sq(f + df, r + push_delta) {

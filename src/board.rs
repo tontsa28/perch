@@ -1,4 +1,4 @@
-use std::ops::Not;
+use std::{fmt::Display, ops::Not};
 
 use crate::{bitboard::Bitboard, error::Error, mov::PieceKind};
 
@@ -170,9 +170,10 @@ impl Board {
                 }
 
                 if let Some(sq) = Self::sq(f + df, r + dr)
-                    && Self::bit_is_set(king, sq) {
-                        return true;
-                    }
+                    && Self::bit_is_set(king, sq)
+                {
+                    return true;
+                }
             }
         }
 
@@ -342,6 +343,38 @@ impl TryFrom<&str> for Board {
             black,
             occupied,
         })
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const BORDER: &str = "+---+---+---+---+---+---+---+---+";
+
+        for rank in (0..8).rev() {
+            writeln!(f, "{BORDER}")?;
+            write!(f, "|")?;
+
+            for file in 0..8 {
+                let sq = rank * 8 + file;
+
+                let glyph = if let Some((color, kind)) = self.piece_at(sq) {
+                    let mut ch = char::from(kind);
+                    if color == Color::Black {
+                        ch.make_ascii_lowercase();
+                    }
+                    ch
+                } else {
+                    ' '
+                };
+
+                write!(f, " {} |", glyph)?;
+            }
+
+            writeln!(f, " {}", rank + 1)?;
+        }
+
+        writeln!(f, "{BORDER}")?;
+        write!(f, "  a   b   c   d   e   f   g   h  ")
     }
 }
 

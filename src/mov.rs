@@ -73,9 +73,10 @@ impl Display for Move {
         write!(f, "{ff}{fr}{tf}{tr}")?;
 
         if let Some(p) = self.promotion
-            && let Some(c) = Self::promo_char(p) {
-                write!(f, "{c}")?;
-            }
+            && let Some(c) = Self::promo_char(p)
+        {
+            write!(f, "{c}")?;
+        }
 
         Ok(())
     }
@@ -134,4 +135,17 @@ pub(crate) enum PieceKind {
     Rook = 3,
     Queen = 4,
     King = 5,
+}
+
+impl From<PieceKind> for char {
+    fn from(value: PieceKind) -> Self {
+        match value {
+            PieceKind::Pawn => 'P',
+            PieceKind::Knight => 'N',
+            PieceKind::Bishop => 'B',
+            PieceKind::Rook => 'R',
+            PieceKind::Queen => 'Q',
+            PieceKind::King => 'K',
+        }
+    }
 }

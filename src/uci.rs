@@ -30,7 +30,7 @@ impl Uci {
 
             match UciCommand::try_from(line.as_str()) {
                 Ok(cmd) => match cmd {
-                    UciCommand::Display => println!("{:?}", self.chess.board()),
+                    UciCommand::Display => println!("{}", self.chess.board()),
                     UciCommand::Help => {
                         println!("Perch is a simple chess engine written in Rust by tontsa28!");
                     }
