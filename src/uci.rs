@@ -44,8 +44,9 @@ impl Uci {
     }
 
     fn go(&mut self, depth: Option<u8>) -> String {
-        let mv = iterative_deepening(&mut self.chess, depth.unwrap_or(6)).unwrap();
-        mv.to_string()
+        iterative_deepening(&mut self.chess, depth.unwrap_or(6))
+            .map(|m| m.to_string())
+            .unwrap_or(String::from("0000"))
     }
 }
 
