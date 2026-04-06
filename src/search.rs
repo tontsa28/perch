@@ -113,3 +113,18 @@ fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) ->
 
 //     alpha
 // }
+
+pub(crate) fn perft(pos: &mut Position, depth: u8) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+
+    let mut nodes = 0;
+    for mv in pos.legal_moves() {
+        let undo = pos.make_move(mv);
+        nodes += perft(pos, depth - 1);
+        pos.unmake_move(mv, undo);
+    }
+
+    nodes
+}

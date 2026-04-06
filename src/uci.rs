@@ -3,7 +3,7 @@ use std::{io::stdin, result::Result as StdResult};
 use crate::{
     error::{Error, Result},
     position::Position,
-    search::iterative_deepening,
+    search::{iterative_deepening, perft},
 };
 
 pub(crate) struct Uci {
@@ -35,6 +35,7 @@ impl Uci {
                         println!("Perch is a simple chess engine written in Rust by tontsa28!");
                     }
                     UciCommand::Go { depth } => println!("bestmove {}", self.go(depth)),
+                    UciCommand::Perft { depth } => println!("nodes {}", self.perft(depth)),
                     UciCommand::Position(chess) => self.chess = chess,
                     UciCommand::Quit => return,
                 },
@@ -48,12 +49,17 @@ impl Uci {
             .map(|m| m.to_string())
             .unwrap_or(String::from("0000"))
     }
+
+    fn perft(&mut self, depth: Option<u8>) -> usize {
+        perft(&mut self.chess, depth.unwrap_or(0))
+    }
 }
 
 pub(crate) enum UciCommand {
     Display,
     Help,
     Go { depth: Option<u8> },
+    Perft { depth: Option<u8> },
     Position(Position),
     Quit,
 }
@@ -73,6 +79,8 @@ impl TryFrom<&str> for UciCommand {
                     Self::position(line)
                 } else if line.starts_with("go") {
                     Self::go(line)
+                } else if line.starts_with("perft") {
+                    Self::perft(line)
                 } else {
                     Err("Unknown command.")?
                 }
@@ -126,5 +134,18 @@ impl UciCommand {
         }
 
         Ok(Self::Go { depth: None })
+    }
+
+    fn perft(line: &str) -> Result<Self> {
+        let mut parts = line.split_whitespace();
+
+        assert_eq!(parts.next(), Some("perft"));
+
+        if let Some(arg) = parts.next() {
+            let depth = arg.parse::<u8>().ok();
+            return Ok(Self::Perft { depth });
+        }
+
+        Ok(Self::Perft { depth: None })
     }
 }
