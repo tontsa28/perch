@@ -588,6 +588,23 @@ impl Position {
         let us = self.turn;
 
         for mv in pseudo {
+            if mv.is_castle_kingside || mv.is_castle_queenside {
+                let (start_sq, transit_sq, dest_sq) =
+                    match (us, mv.is_castle_kingside, mv.is_castle_queenside) {
+                        (Color::White, true, false) => (4, 5, 6),
+                        (Color::Black, true, false) => (60, 61, 62),
+                        (Color::White, false, true) => (4, 3, 2),
+                        (Color::Black, false, true) => (60, 59, 58),
+                        _ => unreachable!("castle move must be exactly one side"),
+                    };
+                if self.board.is_square_attacked(start_sq, !us)
+                    || self.board.is_square_attacked(transit_sq, !us)
+                    || self.board.is_square_attacked(dest_sq, !us)
+                {
+                    continue;
+                }
+            }
+
             let undo = self.make_move(mv);
             if !self.is_check(us) {
                 moves.push(mv);
@@ -628,8 +645,8 @@ impl TryFrom<&str> for Position {
         let turn_str = *parts.get(1).unwrap();
         let castling_str = *parts.get(2).unwrap();
         let en_passant_str = *parts.get(3).unwrap();
-        let halfmoves_str = *parts.get(4).unwrap();
-        let fullmoves_str = *parts.get(5).unwrap();
+        let halfmoves_str = *parts.get(4).unwrap_or(&"0");
+        let fullmoves_str = *parts.get(5).unwrap_or(&"1");
 
         let mut castling: u8 = 0;
         if castling_str.contains('K') {
