@@ -583,7 +583,7 @@ impl Position {
     }
 
     pub(crate) fn legal_moves(&mut self) -> Vec<Move> {
-        let mut moves = Vec::new();
+        let mut moves = Vec::with_capacity(64);
         let pseudo = self.gen_pseudo_legal_moves();
         let us = self.turn;
 
