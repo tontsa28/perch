@@ -36,7 +36,7 @@ impl Position {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn sq(file: i8, rank: i8) -> Option<u8> {
         if (0..8).contains(&file) && (0..8).contains(&rank) {
             Some((rank as u8) * 8 + (file as u8))
@@ -45,12 +45,12 @@ impl Position {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn file_rank(sq: u8) -> (i8, i8) {
         ((sq % 8) as i8, (sq / 8) as i8)
     }
 
-    #[inline]
+    #[inline(always)]
     fn push_promotion_set(moves: &mut Vec<Move>, from: u8, to: u8, is_en_passant: bool) {
         for promo in [
             PieceKind::Knight,

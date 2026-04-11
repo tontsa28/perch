@@ -13,14 +13,14 @@ pub(crate) struct Move {
 }
 
 impl Move {
-    #[inline]
+    #[inline(always)]
     fn sq_to_uci(sq: u8) -> (char, char) {
         let file = (b'a' + (sq % 8)) as char;
         let rank = (b'1' + (sq / 8)) as char;
         (file, rank)
     }
 
-    #[inline]
+    #[inline(always)]
     fn promo_char(p: PieceKind) -> Option<char> {
         match p {
             PieceKind::Pawn | PieceKind::King => None,
@@ -31,7 +31,7 @@ impl Move {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn file_char_to_u8(c: u8) -> Option<u8> {
         if (b'a'..=b'h').contains(&c) {
             Some(c - b'a')
@@ -40,7 +40,7 @@ impl Move {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn rank_char_to_u8(c: u8) -> Option<u8> {
         if (b'1'..=b'8').contains(&c) {
             Some(c - b'1')
@@ -49,7 +49,7 @@ impl Move {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn promo_from_char(c: u8) -> Option<PieceKind> {
         match c {
             b'n' => Some(PieceKind::Knight),

@@ -67,12 +67,12 @@ impl Board {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn bit_is_set(bb: u64, sq: u8) -> bool {
         ((bb >> sq) & 1) != 0
     }
 
-    #[inline]
+    #[inline(always)]
     fn sq(file: i8, rank: i8) -> Option<u8> {
         if (0..8).contains(&file) && (0..8).contains(&rank) {
             Some((rank as u8) * 8 + (file as u8))
@@ -81,12 +81,12 @@ impl Board {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn file_rank(sq: u8) -> (i8, i8) {
         ((sq % 8) as i8, (sq / 8) as i8)
     }
 
-    #[inline]
+    #[inline(always)]
     fn bitboard_index(color: Color, kind: PieceKind) -> usize {
         let color_offset = match color {
             Color::White => 0,
