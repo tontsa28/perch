@@ -2,6 +2,7 @@ mod bitboard;
 mod board;
 mod error;
 mod mov;
+mod piece;
 mod position;
 mod search;
 mod uci;

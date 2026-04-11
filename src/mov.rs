@@ -1,6 +1,6 @@
 use std::{fmt::Display, num::NonZeroU16};
 
-use crate::{board::Color, error::Error};
+use crate::{board::Color, error::Error, piece::PieceKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Move {
@@ -124,28 +124,4 @@ pub(crate) struct Undo {
     pub(crate) en_passant: Option<u8>,
     pub(crate) halfmoves: u16,
     pub(crate) fullmoves: NonZeroU16,
-}
-
-#[repr(usize)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum PieceKind {
-    Pawn = 0,
-    Knight = 1,
-    Bishop = 2,
-    Rook = 3,
-    Queen = 4,
-    King = 5,
-}
-
-impl From<PieceKind> for char {
-    fn from(value: PieceKind) -> Self {
-        match value {
-            PieceKind::Pawn => 'P',
-            PieceKind::Knight => 'N',
-            PieceKind::Bishop => 'B',
-            PieceKind::Rook => 'R',
-            PieceKind::Queen => 'Q',
-            PieceKind::King => 'K',
-        }
-    }
 }

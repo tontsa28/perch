@@ -5,7 +5,8 @@ use crate::{
     bitboard::Bitboard,
     board::{Board, Color},
     error::{Error, Result},
-    mov::{Move, PieceKind, Undo},
+    mov::{Move, Undo},
+    piece::{PieceKind, PieceOnSquare},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -420,7 +421,7 @@ impl Position {
             fullmoves: self.fullmoves,
         };
 
-        let (moving_color, moving_kind) = self.board.piece_at(mv.from).unwrap();
+        let (moving_color, moving_kind) = self.board.piece_at(mv.from).into();
         assert_eq!(moving_color, us);
 
         let mut is_capture = false;
@@ -431,15 +432,23 @@ impl Position {
                 Color::Black => mv.to + 8,
             };
 
-            if let Some((cap_color, cap_kind)) = self.board.piece_at(cap_sq) {
+            let cap_ps = self.board.piece_at(cap_sq);
+            if cap_ps != PieceOnSquare::Empty {
+                let (cap_color, cap_kind) = cap_ps.into();
                 assert_eq!(cap_color, !us);
                 assert_eq!(cap_kind, PieceKind::Pawn);
+
                 self.board.remove_piece(cap_color, cap_kind, cap_sq);
                 undo.captured = Some((cap_color, cap_kind, cap_sq));
                 is_capture = true;
             }
-        } else if let Some((cap_color, cap_kind)) = self.board.piece_at(mv.to) {
+        }
+
+        let cap_ps = self.board.piece_at(mv.to);
+        if cap_ps != PieceOnSquare::Empty {
+            let (cap_color, cap_kind) = cap_ps.into();
             assert_eq!(cap_color, !us);
+
             self.board.remove_piece(cap_color, cap_kind, mv.to);
             undo.captured = Some((cap_color, cap_kind, mv.to));
             is_capture = true;
@@ -571,7 +580,7 @@ impl Position {
             self.board.remove_piece(us, promoted_to, mv.to);
             self.board.add_piece(us, PieceKind::Pawn, mv.from);
         } else {
-            let (c, k) = self.board.piece_at(mv.to).unwrap();
+            let (c, k) = self.board.piece_at(mv.to).into();
             assert_eq!(c, us);
             self.board.remove_piece(us, k, mv.to);
             self.board.add_piece(us, k, mv.from);

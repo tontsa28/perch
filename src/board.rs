@@ -1,13 +1,15 @@
 use std::{fmt::Display, ops::Not};
 
-use crate::{bitboard::Bitboard, error::Error, mov::PieceKind};
-
-const WHITE_PIECES: &str = "PNBRQK";
-const BLACK_PIECES: &str = "pnbrqk";
+use crate::{
+    bitboard::Bitboard,
+    error::Error,
+    piece::{PieceKind, PieceOnSquare, parse_piece},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Board {
     pieces: [Bitboard; 12],
+    squares: [PieceOnSquare; 64],
     white: Bitboard,
     black: Bitboard,
     occupied: Bitboard,
@@ -15,6 +17,34 @@ pub(crate) struct Board {
 
 impl Board {
     pub fn new() -> Self {
+        let mut squares = [PieceOnSquare::Empty; 64];
+
+        squares[0] = PieceOnSquare::WhiteRook;
+        squares[1] = PieceOnSquare::WhiteKnight;
+        squares[2] = PieceOnSquare::WhiteBishop;
+        squares[3] = PieceOnSquare::WhiteQueen;
+        squares[4] = PieceOnSquare::WhiteKing;
+        squares[5] = PieceOnSquare::WhiteBishop;
+        squares[6] = PieceOnSquare::WhiteKnight;
+        squares[7] = PieceOnSquare::WhiteRook;
+
+        for sq in 8..16 {
+            squares[sq] = PieceOnSquare::WhitePawn;
+        }
+
+        for sq in 48..56 {
+            squares[sq] = PieceOnSquare::BlackPawn;
+        }
+
+        squares[56] = PieceOnSquare::BlackRook;
+        squares[57] = PieceOnSquare::BlackKnight;
+        squares[58] = PieceOnSquare::BlackBishop;
+        squares[59] = PieceOnSquare::BlackQueen;
+        squares[60] = PieceOnSquare::BlackKing;
+        squares[61] = PieceOnSquare::BlackBishop;
+        squares[62] = PieceOnSquare::BlackKnight;
+        squares[63] = PieceOnSquare::BlackRook;
+
         Self {
             pieces: [
                 Bitboard(0xff00),
@@ -30,6 +60,7 @@ impl Board {
                 Bitboard(0x1000_0000_0000_0000),
                 Bitboard(0x0800_0000_0000_0000),
             ],
+            squares,
             white: Bitboard(0xffff),
             black: Bitboard(0xffff_0000_0000_0000),
             occupied: Bitboard(0xffff_0000_0000_ffff),
@@ -221,29 +252,9 @@ impl Board {
         (self.color_bitboard(!color).0 & mask) != 0
     }
 
-    pub(crate) fn piece_at(&self, target_sq: u8) -> Option<(Color, PieceKind)> {
+    pub(crate) fn piece_at(&self, target_sq: u8) -> PieceOnSquare {
         assert!(target_sq < 64);
-        let mask = 1u64 << target_sq;
-
-        let kinds = &[
-            PieceKind::Pawn,
-            PieceKind::Knight,
-            PieceKind::Bishop,
-            PieceKind::Rook,
-            PieceKind::Queen,
-            PieceKind::King,
-        ];
-
-        for &color in &[Color::White, Color::Black] {
-            for &kind in kinds {
-                let idx = Self::bitboard_index(color, kind);
-                if (self.pieces[idx].0 & mask) != 0 {
-                    return Some((color, kind));
-                }
-            }
-        }
-
-        None
+        self.squares[target_sq as usize]
     }
 
     pub(crate) fn remove_piece(&mut self, color: Color, kind: PieceKind, target_sq: u8) {
@@ -251,6 +262,7 @@ impl Board {
         let mask = 1u64 << target_sq;
         let idx = Self::bitboard_index(color, kind);
         self.pieces[idx].0 &= !mask;
+        self.squares[target_sq as usize] = PieceOnSquare::Empty;
 
         match color {
             Color::White => self.white.0 &= !mask,
@@ -265,6 +277,7 @@ impl Board {
         let mask = 1u64 << target_sq;
         let idx = Self::bitboard_index(color, kind);
         self.pieces[idx].0 |= mask;
+        self.squares[target_sq as usize] = PieceOnSquare::from((color, kind));
 
         match color {
             Color::White => self.white.0 |= mask,
@@ -298,6 +311,7 @@ impl TryFrom<&str> for Board {
         let mut file: u8 = 0;
 
         let mut pieces = [Bitboard(0); 12];
+        let mut squares = [PieceOnSquare::Empty; 64];
         let mut white = Bitboard(0);
         let mut black = Bitboard(0);
         let mut occupied = Bitboard(0);
@@ -305,40 +319,31 @@ impl TryFrom<&str> for Board {
         for c in pos.chars() {
             if c.is_ascii_digit() {
                 file += c.to_digit(10).unwrap() as u8;
-            } else if c.is_ascii_alphabetic() {
-                match c {
-                    'P' => pieces[0].0 |= 1u64 << (rank * 8 + file),
-                    'N' => pieces[1].0 |= 1u64 << (rank * 8 + file),
-                    'B' => pieces[2].0 |= 1u64 << (rank * 8 + file),
-                    'R' => pieces[3].0 |= 1u64 << (rank * 8 + file),
-                    'Q' => pieces[4].0 |= 1u64 << (rank * 8 + file),
-                    'K' => pieces[5].0 |= 1u64 << (rank * 8 + file),
-                    'p' => pieces[6].0 |= 1u64 << (rank * 8 + file),
-                    'n' => pieces[7].0 |= 1u64 << (rank * 8 + file),
-                    'b' => pieces[8].0 |= 1u64 << (rank * 8 + file),
-                    'r' => pieces[9].0 |= 1u64 << (rank * 8 + file),
-                    'q' => pieces[10].0 |= 1u64 << (rank * 8 + file),
-                    'k' => pieces[11].0 |= 1u64 << (rank * 8 + file),
-                    _ => return Err("invalid character in FEN: {c}")?,
-                }
-
-                if WHITE_PIECES.contains(c) {
-                    white.0 |= 1u64 << (rank * 8 + file);
-                }
-                if BLACK_PIECES.contains(c) {
-                    black.0 |= 1u64 << (rank * 8 + file);
-                }
-                occupied = white | black;
-
-                file += 1;
             } else if c == '/' {
                 rank -= 1;
                 file = 0;
+            } else if let Some((ps, color, kind)) = parse_piece(c) {
+                let sq = rank * 8 + file;
+                let mask = 1u64 << sq;
+
+                squares[sq as usize] = ps;
+                pieces[Self::bitboard_index(color, kind)].0 |= mask;
+
+                match color {
+                    Color::White => white.0 |= mask,
+                    Color::Black => black.0 |= mask,
+                }
+                occupied.0 |= mask;
+
+                file += 1;
+            } else {
+                return Err("invalid character in FEN")?;
             }
         }
 
         Ok(Self {
             pieces,
+            squares,
             white,
             black,
             occupied,
@@ -356,16 +361,7 @@ impl Display for Board {
 
             for file in 0..8 {
                 let sq = rank * 8 + file;
-
-                let glyph = if let Some((color, kind)) = self.piece_at(sq) {
-                    let mut ch = char::from(kind);
-                    if color == Color::Black {
-                        ch.make_ascii_lowercase();
-                    }
-                    ch
-                } else {
-                    ' '
-                };
+                let glyph = char::from(self.piece_at(sq));
 
                 write!(f, " {} |", glyph)?;
             }
