@@ -1,6 +1,7 @@
 use std::{fmt::Display, ops::Not};
 
 use crate::{
+    attacks::KNIGHT_ATTACKS,
     bitboard::Bitboard,
     error::Error,
     piece::{PieceKind, PieceOnSquare, parse_piece},
@@ -153,28 +154,8 @@ impl Board {
     }
 
     fn is_attacked_by_knight(&self, target_sq: u8, by: Color) -> bool {
-        let (f, r) = Self::file_rank(target_sq);
-        let knights = match by {
-            Color::White => self.pieces[1].0,
-            Color::Black => self.pieces[7].0,
-        };
-
-        const OFFSETS: [(i8, i8); 8] = [
-            (-2, -1),
-            (-2, 1),
-            (-1, -2),
-            (-1, 2),
-            (1, -2),
-            (1, 2),
-            (2, -1),
-            (2, 1),
-        ];
-
-        OFFSETS.into_iter().any(|(df, dr)| {
-            Self::sq(f + df, r + dr)
-                .map(|sq| Self::bit_is_set(knights, sq))
-                .unwrap_or(false)
-        })
+        let enemy_knights = self.piece_bitboard(by, PieceKind::Knight);
+        KNIGHT_ATTACKS[target_sq as usize] & enemy_knights != Bitboard(0)
     }
 
     fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
