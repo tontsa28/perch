@@ -98,6 +98,7 @@ impl Board {
         directions: &[(i8, i8)],
         diagonal: bool,
     ) -> bool {
+        debug_assert!(target_sq < 64);
         let (f0, r0) = Self::file_rank(target_sq);
         let (bishops, rooks, queens) = match by {
             Color::White => (self.pieces[2].0, self.pieces[3].0, self.pieces[4].0),
@@ -131,6 +132,7 @@ impl Board {
     }
 
     fn is_attacked_by_pawn(&self, target_sq: u8, by: Color) -> bool {
+        debug_assert!(target_sq < 64);
         let pawns = self.piece_bitboard(by, PieceKind::Pawn);
         let mask = match by {
             Color::White => BLACK_PAWN_ATTACKS[target_sq as usize],
@@ -140,21 +142,25 @@ impl Board {
     }
 
     fn is_attacked_by_knight(&self, target_sq: u8, by: Color) -> bool {
+        debug_assert!(target_sq < 64);
         let knights = self.piece_bitboard(by, PieceKind::Knight);
         (KNIGHT_ATTACKS[target_sq as usize] & knights) != Bitboard(0)
     }
 
     fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
+        debug_assert!(target_sq < 64);
         const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
         self.ray_hits_slider(target_sq, by, &DIAG, true)
     }
 
     fn is_attacked_by_rook_or_queen(&self, target_sq: u8, by: Color) -> bool {
+        debug_assert!(target_sq < 64);
         const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
         self.ray_hits_slider(target_sq, by, &ORTHO, false)
     }
 
     fn is_attacked_by_king(&self, target_sq: u8, by: Color) -> bool {
+        debug_assert!(target_sq < 64);
         let king = self.piece_bitboard(by, PieceKind::King);
         (KING_ATTACKS[target_sq as usize] & king) != Bitboard(0)
     }
@@ -175,6 +181,7 @@ impl Board {
     }
 
     pub(crate) fn is_square_attacked(&self, target_sq: u8, by: Color) -> bool {
+        debug_assert!(target_sq < 64);
         self.is_attacked_by_pawn(target_sq, by)
             || self.is_attacked_by_knight(target_sq, by)
             || self.is_attacked_by_king(target_sq, by)
@@ -183,30 +190,30 @@ impl Board {
     }
 
     pub(crate) fn is_empty(&self, target_sq: u8) -> bool {
-        assert!(target_sq < 64);
+        debug_assert!(target_sq < 64);
         let mask = 1u64 << target_sq;
         (self.occupied.0 & mask) == 0
     }
 
     pub(crate) fn has_friend(&self, target_sq: u8, color: Color) -> bool {
-        assert!(target_sq < 64);
+        debug_assert!(target_sq < 64);
         let mask = 1u64 << target_sq;
         (self.color_bitboard(color).0 & mask) != 0
     }
 
     pub(crate) fn has_enemy(&self, target_sq: u8, color: Color) -> bool {
-        assert!(target_sq < 64);
+        debug_assert!(target_sq < 64);
         let mask = 1u64 << target_sq;
         (self.color_bitboard(!color).0 & mask) != 0
     }
 
     pub(crate) fn piece_at(&self, target_sq: u8) -> PieceOnSquare {
-        assert!(target_sq < 64);
+        debug_assert!(target_sq < 64);
         self.squares[target_sq as usize]
     }
 
     pub(crate) fn remove_piece(&mut self, color: Color, kind: PieceKind, target_sq: u8) {
-        assert!(target_sq < 64);
+        debug_assert!(target_sq < 64);
         let mask = 1u64 << target_sq;
         let idx = Self::bitboard_index(color, kind);
         self.pieces[idx].0 &= !mask;
@@ -221,7 +228,7 @@ impl Board {
     }
 
     pub(crate) fn add_piece(&mut self, color: Color, kind: PieceKind, target_sq: u8) {
-        assert!(target_sq < 64);
+        debug_assert!(target_sq < 64);
         let mask = 1u64 << target_sq;
         let idx = Self::bitboard_index(color, kind);
         self.pieces[idx].0 |= mask;

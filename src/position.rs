@@ -422,7 +422,7 @@ impl Position {
         };
 
         let (moving_color, moving_kind) = self.board.piece_at(mv.from).into();
-        assert_eq!(moving_color, us);
+        debug_assert_eq!(moving_color, us);
 
         let mut is_capture = false;
 
@@ -435,8 +435,8 @@ impl Position {
             let cap_ps = self.board.piece_at(cap_sq);
             if cap_ps != PieceOnSquare::Empty {
                 let (cap_color, cap_kind) = cap_ps.into();
-                assert_eq!(cap_color, !us);
-                assert_eq!(cap_kind, PieceKind::Pawn);
+                debug_assert_eq!(cap_color, !us);
+                debug_assert_eq!(cap_kind, PieceKind::Pawn);
 
                 self.board.remove_piece(cap_color, cap_kind, cap_sq);
                 undo.captured = Some((cap_color, cap_kind, cap_sq));
@@ -447,7 +447,7 @@ impl Position {
         let cap_ps = self.board.piece_at(mv.to);
         if cap_ps != PieceOnSquare::Empty {
             let (cap_color, cap_kind) = cap_ps.into();
-            assert_eq!(cap_color, !us);
+            debug_assert_eq!(cap_color, !us);
 
             self.board.remove_piece(cap_color, cap_kind, mv.to);
             undo.captured = Some((cap_color, cap_kind, mv.to));
@@ -581,7 +581,7 @@ impl Position {
             self.board.add_piece(us, PieceKind::Pawn, mv.from);
         } else {
             let (c, k) = self.board.piece_at(mv.to).into();
-            assert_eq!(c, us);
+            debug_assert_eq!(c, us);
             self.board.remove_piece(us, k, mv.to);
             self.board.add_piece(us, k, mv.from);
         }
