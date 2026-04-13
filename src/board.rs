@@ -1,7 +1,7 @@
 use std::{fmt::Display, ops::Not};
 
 use crate::{
-    attacks::KNIGHT_ATTACKS,
+    attacks::{KING_ATTACKS, KNIGHT_ATTACKS},
     bitboard::Bitboard,
     error::Error,
     piece::{PieceKind, PieceOnSquare, parse_piece},
@@ -169,27 +169,8 @@ impl Board {
     }
 
     fn is_attacked_by_king(&self, target_sq: u8, by: Color) -> bool {
-        let (f, r) = Self::file_rank(target_sq);
-        let king = match by {
-            Color::White => self.pieces[5].0,
-            Color::Black => self.pieces[11].0,
-        };
-
-        for df in -1..=1 {
-            for dr in -1..=1 {
-                if df == 0 && dr == 0 {
-                    continue;
-                }
-
-                if let Some(sq) = Self::sq(f + df, r + dr)
-                    && Self::bit_is_set(king, sq)
-                {
-                    return true;
-                }
-            }
-        }
-
-        false
+        let enemy_king = self.piece_bitboard(by, PieceKind::King);
+        KING_ATTACKS[target_sq as usize] & enemy_king != Bitboard(0)
     }
 
     pub(crate) fn piece_bitboard(&self, color: Color, kind: PieceKind) -> Bitboard {
