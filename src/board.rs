@@ -1,7 +1,7 @@
 use std::{fmt::Display, ops::Not};
 
 use crate::{
-    attacks::{KING_ATTACKS, KNIGHT_ATTACKS},
+    attacks::{BLACK_PAWN_ATTACKS, KING_ATTACKS, KNIGHT_ATTACKS, WHITE_PAWN_ATTACKS},
     bitboard::Bitboard,
     error::Error,
     piece::{PieceKind, PieceOnSquare, parse_piece},
@@ -69,11 +69,6 @@ impl Board {
     }
 
     #[inline(always)]
-    fn bit_is_set(bb: u64, sq: u8) -> bool {
-        ((bb >> sq) & 1) != 0
-    }
-
-    #[inline(always)]
     fn sq(file: i8, rank: i8) -> Option<u8> {
         if (0..8).contains(&file) && (0..8).contains(&rank) {
             Some((rank as u8) * 8 + (file as u8))
@@ -136,26 +131,17 @@ impl Board {
     }
 
     fn is_attacked_by_pawn(&self, target_sq: u8, by: Color) -> bool {
-        let (f, r) = Self::file_rank(target_sq);
-        let pawns = match by {
-            Color::White => self.pieces[0].0,
-            Color::Black => self.pieces[6].0,
+        let pawns = self.piece_bitboard(by, PieceKind::Pawn);
+        let mask = match by {
+            Color::White => BLACK_PAWN_ATTACKS[target_sq as usize],
+            Color::Black => WHITE_PAWN_ATTACKS[target_sq as usize],
         };
-
-        let candidate_squares = match by {
-            Color::White => [Self::sq(f - 1, r - 1), Self::sq(f + 1, r - 1)],
-            Color::Black => [Self::sq(f - 1, r + 1), Self::sq(f + 1, r + 1)],
-        };
-
-        candidate_squares
-            .into_iter()
-            .flatten()
-            .any(|sq| Self::bit_is_set(pawns, sq))
+        (mask & pawns) != Bitboard(0)
     }
 
     fn is_attacked_by_knight(&self, target_sq: u8, by: Color) -> bool {
-        let enemy_knights = self.piece_bitboard(by, PieceKind::Knight);
-        KNIGHT_ATTACKS[target_sq as usize] & enemy_knights != Bitboard(0)
+        let knights = self.piece_bitboard(by, PieceKind::Knight);
+        (KNIGHT_ATTACKS[target_sq as usize] & knights) != Bitboard(0)
     }
 
     fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
@@ -169,8 +155,8 @@ impl Board {
     }
 
     fn is_attacked_by_king(&self, target_sq: u8, by: Color) -> bool {
-        let enemy_king = self.piece_bitboard(by, PieceKind::King);
-        KING_ATTACKS[target_sq as usize] & enemy_king != Bitboard(0)
+        let king = self.piece_bitboard(by, PieceKind::King);
+        (KING_ATTACKS[target_sq as usize] & king) != Bitboard(0)
     }
 
     pub(crate) fn piece_bitboard(&self, color: Color, kind: PieceKind) -> Bitboard {
