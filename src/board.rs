@@ -1,7 +1,10 @@
 use std::{fmt::Display, ops::Not};
 
 use crate::{
-    attacks::{BLACK_PAWN_ATTACKS, KING_ATTACKS, KNIGHT_ATTACKS, WHITE_PAWN_ATTACKS},
+    attacks::{
+        BLACK_PAWN_ATTACKS, E, KING_ATTACKS, KNIGHT_ATTACKS, N, NE, NW, RAYS, S, SE, SW, W,
+        WHITE_PAWN_ATTACKS,
+    },
     bitboard::Bitboard,
     error::Error,
     piece::{PieceKind, PieceOnSquare, parse_piece},
@@ -68,18 +71,19 @@ impl Board {
         }
     }
 
-    #[inline(always)]
-    fn sq(file: i8, rank: i8) -> Option<u8> {
-        if (0..8).contains(&file) && (0..8).contains(&rank) {
-            Some((rank as u8) * 8 + (file as u8))
-        } else {
-            None
-        }
+    #[inline]
+    fn bit_is_set(bb: u64, sq: u8) -> bool {
+        ((bb >> sq) & 1) != 0
     }
 
-    #[inline(always)]
-    fn file_rank(sq: u8) -> (i8, i8) {
-        ((sq % 8) as i8, (sq / 8) as i8)
+    #[inline]
+    fn lsb_sq(bb: u64) -> u8 {
+        bb.trailing_zeros() as u8
+    }
+
+    #[inline]
+    fn msb_sq(bb: u64) -> u8 {
+        (63 - bb.leading_zeros()) as u8
     }
 
     #[inline(always)]
@@ -91,44 +95,16 @@ impl Board {
         color_offset + kind as usize
     }
 
-    fn ray_hits_slider(
-        &self,
-        target_sq: u8,
-        by: Color,
-        directions: &[(i8, i8)],
-        diagonal: bool,
-    ) -> bool {
-        debug_assert!(target_sq < 64);
-        let (f0, r0) = Self::file_rank(target_sq);
-        let (bishops, rooks, queens) = match by {
-            Color::White => (self.pieces[2].0, self.pieces[3].0, self.pieces[4].0),
-            Color::Black => (self.pieces[8].0, self.pieces[9].0, self.pieces[10].0),
-        };
-
-        for &(df, dr) in directions {
-            let mut f = f0 + df;
-            let mut r = r0 + dr;
-
-            while let Some(sq) = Self::sq(f, r) {
-                let mask = 1u64 << sq;
-
-                if (self.occupied.0 & mask) != 0 {
-                    if diagonal {
-                        if (bishops & mask) != 0 || (queens & mask) != 0 {
-                            return true;
-                        }
-                    } else if (rooks & mask) != 0 || (queens & mask) != 0 {
-                        return true;
-                    }
-                    break;
-                }
-
-                f += df;
-                r += dr;
-            }
+    #[inline(always)]
+    fn first_blocker_on_ray(occupied: u64, ray: u64, increasing: bool) -> Option<u8> {
+        let blockers = occupied & ray;
+        if blockers == 0 {
+            None
+        } else if increasing {
+            Some(Self::lsb_sq(blockers))
+        } else {
+            Some(Self::msb_sq(blockers))
         }
-
-        false
     }
 
     fn is_attacked_by_pawn(&self, target_sq: u8, by: Color) -> bool {
@@ -149,14 +125,58 @@ impl Board {
 
     fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
-        const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
-        self.ray_hits_slider(target_sq, by, &DIAG, true)
+        let (bishops, queens) = match by {
+            Color::White => (self.pieces[2].0, self.pieces[4].0),
+            Color::Black => (self.pieces[8].0, self.pieces[10].0),
+        };
+        let sliders = bishops | queens;
+
+        let rays = &RAYS[target_sq as usize];
+
+        let checks = [
+            (rays[NE], true),
+            (rays[NW], true),
+            (rays[SE], false),
+            (rays[SW], false),
+        ];
+
+        for (ray, increasing) in checks {
+            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing) {
+                if Self::bit_is_set(sliders, blocker_sq) {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 
     fn is_attacked_by_rook_or_queen(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
-        const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
-        self.ray_hits_slider(target_sq, by, &ORTHO, false)
+        let (rooks, queens) = match by {
+            Color::White => (self.pieces[3].0, self.pieces[4].0),
+            Color::Black => (self.pieces[9].0, self.pieces[10].0),
+        };
+        let sliders = rooks | queens;
+
+        let rays = &RAYS[target_sq as usize];
+
+        let checks = [
+            (rays[N], true),
+            (rays[S], false),
+            (rays[E], true),
+            (rays[W], false),
+        ];
+
+        for (ray, increasing) in checks {
+            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing) {
+                if Self::bit_is_set(sliders, blocker_sq) {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 
     fn is_attacked_by_king(&self, target_sq: u8, by: Color) -> bool {

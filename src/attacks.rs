@@ -267,3 +267,58 @@ pub(crate) const KING_ATTACKS: [Bitboard; 64] = [
     Bitboard(0xa0e0_0000_0000_0000),
     Bitboard(0x40c0_0000_0000_0000),
 ];
+
+pub(crate) const N: usize = 0;
+pub(crate) const S: usize = 1;
+pub(crate) const E: usize = 2;
+pub(crate) const W: usize = 3;
+pub(crate) const NE: usize = 4;
+pub(crate) const NW: usize = 5;
+pub(crate) const SE: usize = 6;
+pub(crate) const SW: usize = 7;
+
+pub(crate) const RAYS: [[u64; 8]; 64] = gen_rays();
+
+const fn on_board(file: i8, rank: i8) -> bool {
+    file >= 0 && file < 8 && rank >= 0 && rank < 8
+}
+
+const fn gen_ray_from(sq: u8, df: i8, dr: i8) -> u64 {
+    let mut mask = 0u64;
+
+    let f0 = (sq % 8) as i8;
+    let r0 = (sq / 8) as i8;
+
+    let mut f = f0 + df;
+    let mut r = r0 + dr;
+
+    while on_board(f, r) {
+        let to = (r as u8) * 8 + (f as u8);
+        mask |= 1u64 << to;
+
+        f += df;
+        r += dr;
+    }
+
+    mask
+}
+
+const fn gen_rays() -> [[u64; 8]; 64] {
+    let mut rays = [[0u64; 8]; 64];
+    let mut sq = 0u8;
+
+    while sq < 64 {
+        rays[sq as usize][N] = gen_ray_from(sq, 0, 1);
+        rays[sq as usize][S] = gen_ray_from(sq, 0, -1);
+        rays[sq as usize][E] = gen_ray_from(sq, 1, 0);
+        rays[sq as usize][W] = gen_ray_from(sq, -1, 0);
+        rays[sq as usize][NE] = gen_ray_from(sq, 1, 1);
+        rays[sq as usize][NW] = gen_ray_from(sq, -1, 1);
+        rays[sq as usize][SE] = gen_ray_from(sq, 1, -1);
+        rays[sq as usize][SW] = gen_ray_from(sq, -1, -1);
+
+        sq += 1;
+    }
+
+    rays
+}
