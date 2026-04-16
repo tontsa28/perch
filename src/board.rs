@@ -32,12 +32,12 @@ impl Board {
         squares[6] = PieceOnSquare::WhiteKnight;
         squares[7] = PieceOnSquare::WhiteRook;
 
-        for sq in 8..16 {
-            squares[sq] = PieceOnSquare::WhitePawn;
+        for sq in squares.iter_mut().take(16).skip(8) {
+            *sq = PieceOnSquare::WhitePawn;
         }
 
-        for sq in 48..56 {
-            squares[sq] = PieceOnSquare::BlackPawn;
+        for sq in squares.iter_mut().take(56).skip(48) {
+            *sq = PieceOnSquare::BlackPawn;
         }
 
         squares[56] = PieceOnSquare::BlackRook;
@@ -141,10 +141,10 @@ impl Board {
         ];
 
         for (ray, increasing) in checks {
-            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing) {
-                if Self::bit_is_set(sliders, blocker_sq) {
-                    return true;
-                }
+            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing)
+                && Self::bit_is_set(sliders, blocker_sq)
+            {
+                return true;
             }
         }
 
@@ -169,10 +169,10 @@ impl Board {
         ];
 
         for (ray, increasing) in checks {
-            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing) {
-                if Self::bit_is_set(sliders, blocker_sq) {
-                    return true;
-                }
+            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing)
+                && Self::bit_is_set(sliders, blocker_sq)
+            {
+                return true;
             }
         }
 
