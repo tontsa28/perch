@@ -31,4 +31,4 @@ En aio suinkaan toteuttaa kaikkia edellämainittuja kuitenkaan vielä ensi viiko
 Testit ja dokumentaatio ovat nyt etusijalla.
 
 ### Työtunnit
-Kun pääsiäistauko otetaan huomioon, olen tehnyt projektia viimeisten kahden viikon aikana varmaankin noin 25 tuntia.
+Tällä viikolla käytin projektin parissa arviolta 6-8 tuntia, en ole sen tarkemmin pitänyt kirjaa.
