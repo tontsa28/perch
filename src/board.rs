@@ -276,25 +276,23 @@ impl Board {
 
         for i in 0..=5 {
             let mut bb = self.pieces[i].0;
-            let value = VALUES[i];
-            let pst = MG[i];
+            let value = &VALUES[i];
+            let pst = &MG[i];
 
             while bb != 0 {
                 let sq = Self::pop_lsb(&mut bb) as usize;
-                score += value + pst[sq];
+                score += value + pst[sq ^ 56];
             }
         }
 
         for i in 6..=11 {
             let mut bb = self.pieces[i].0;
-            let value = VALUES[i - 6];
-            let pst = MG[i - 6];
+            let value = &VALUES[i - 6];
+            let pst = &MG[i - 6];
 
             while bb != 0 {
                 let sq = Self::pop_lsb(&mut bb) as usize;
-                let mirrored = sq ^ 56;
-
-                score -= value + pst[mirrored];
+                score -= value + pst[sq];
             }
         }
 
