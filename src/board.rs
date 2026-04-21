@@ -7,6 +7,7 @@ use crate::{
     },
     bitboard::Bitboard,
     error::Error,
+    evals::MG,
     piece::{PieceKind, PieceOnSquare, parse_piece},
 };
 
@@ -71,19 +72,26 @@ impl Board {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn bit_is_set(bb: u64, sq: u8) -> bool {
         ((bb >> sq) & 1) != 0
     }
 
-    #[inline]
+    #[inline(always)]
     fn lsb_sq(bb: u64) -> u8 {
         bb.trailing_zeros() as u8
     }
 
-    #[inline]
+    #[inline(always)]
     fn msb_sq(bb: u64) -> u8 {
         (63 - bb.leading_zeros()) as u8
+    }
+
+    #[inline(always)]
+    fn pop_lsb(bb: &mut u64) -> u8 {
+        let sq = bb.trailing_zeros() as u8;
+        *bb &= *bb - 1;
+        sq
     }
 
     #[inline(always)]
@@ -262,16 +270,32 @@ impl Board {
         self.occupied.0 |= mask;
     }
 
-    pub(crate) fn evaluate_material(&self) -> i32 {
+    pub(crate) fn evaluate_material_pst(&self) -> i32 {
         let mut score = 0;
-        let values = [100, 320, 330, 500, 900, 0];
+        const VALUES: [i32; 6] = [100, 320, 330, 500, 900, 0];
 
-        for (i, &bb) in self.pieces[0..=5].iter().enumerate() {
-            score += (bb.0.count_ones() as i32) * values[i];
+        for i in 0..=5 {
+            let mut bb = self.pieces[i].0;
+            let value = VALUES[i];
+            let pst = MG[i];
+
+            while bb != 0 {
+                let sq = Self::pop_lsb(&mut bb) as usize;
+                score += value + pst[sq];
+            }
         }
 
-        for (i, &bb) in self.pieces[6..=11].iter().enumerate() {
-            score -= (bb.0.count_ones() as i32) * values[i];
+        for i in 6..=11 {
+            let mut bb = self.pieces[i].0;
+            let value = VALUES[i - 6];
+            let pst = MG[i - 6];
+
+            while bb != 0 {
+                let sq = Self::pop_lsb(&mut bb) as usize;
+                let mirrored = sq ^ 56;
+
+                score -= value + pst[mirrored];
+            }
         }
 
         score

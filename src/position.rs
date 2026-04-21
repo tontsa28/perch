@@ -626,8 +626,8 @@ impl Position {
 
     pub(crate) fn evaluate(&self) -> i32 {
         match self.turn {
-            Color::White => self.board.evaluate_material(),
-            Color::Black => -self.board.evaluate_material(),
+            Color::White => self.board.evaluate_material_pst(),
+            Color::Black => -self.board.evaluate_material_pst(),
         }
     }
 

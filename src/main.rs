@@ -2,6 +2,7 @@ mod attacks;
 mod bitboard;
 mod board;
 mod error;
+mod evals;
 mod mov;
 mod piece;
 mod position;
