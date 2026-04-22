@@ -691,3 +691,286 @@ impl TryFrom<&str> for Position {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::search::perft;
+
+    fn pos(fen: &str) -> Position {
+        Position::try_from(fen).expect("valid FEN")
+    }
+
+    // ── Basic ────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn startpos_has_20_legal_moves() {
+        assert_eq!(Position::new().legal_moves().len(), 20);
+    }
+
+    #[test]
+    fn startpos_fen_equivalent_to_new() {
+        let mut p1 = Position::new();
+        let mut p2 = pos("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert_eq!(perft(&mut p1, 3), perft(&mut p2, 3));
+    }
+
+    #[test]
+    fn make_unmake_is_invertible() {
+        // After making and immediately unmaking every legal move the position
+        // must be byte-for-byte identical to before, verified via perft.
+        let mut p = Position::new();
+        let before = perft(&mut p, 3);
+        for mv in p.legal_moves() {
+            let undo = p.make_move(mv);
+            p.unmake_move(mv, undo);
+        }
+        assert_eq!(perft(&mut p, 3), before);
+    }
+
+    // ── Terminal positions ────────────────────────────────────────────────────
+
+    #[test]
+    fn checkmate_has_no_legal_moves() {
+        // Back-rank mate: white rooks on a1 and b2, white king on h1
+        let mut p = pos("k7/8/8/8/8/8/1R6/R6K b - - 0 1");
+        assert!(p.is_check(Color::Black));
+        assert!(p.legal_moves().is_empty());
+    }
+
+    #[test]
+    fn stalemate_is_not_check_and_has_no_legal_moves() {
+        // Queen + king cage: black king on a8, white queen on b6, white king on a6
+        let mut p = pos("k7/8/KQ6/8/8/8/8/8 b - - 0 1");
+        assert!(!p.is_check(Color::Black));
+        assert!(p.legal_moves().is_empty());
+    }
+
+    // ── Castling ─────────────────────────────────────────────────────────────
+
+    #[test]
+    fn white_castles_both_sides() {
+        let mut p = pos("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+        let moves = p.legal_moves();
+        assert!(moves.iter().any(|m| m.is_castle_kingside));
+        assert!(moves.iter().any(|m| m.is_castle_queenside));
+    }
+
+    #[test]
+    fn no_castling_without_rights() {
+        let mut p = pos("r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1");
+        assert!(
+            !p.legal_moves()
+                .iter()
+                .any(|m| m.is_castle_kingside || m.is_castle_queenside)
+        );
+    }
+
+    #[test]
+    fn no_castling_through_attacked_square() {
+        // Black rook on f8 covers f1, blocking white kingside castle transit
+        let mut p = pos("5r2/8/8/8/8/8/8/4K2R w K - 0 1");
+        assert!(!p.legal_moves().iter().any(|m| m.is_castle_kingside));
+    }
+
+    // ── En passant ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn en_passant_is_generated_when_target_set() {
+        // White pawn on e5, black just played d7-d5 — en passant target is d6
+        let mut p = pos("8/8/8/3pP3/8/8/8/4K2k w - d6 0 1");
+        assert!(p.legal_moves().iter().any(|m| m.is_en_passant));
+    }
+
+    #[test]
+    fn en_passant_not_generated_without_target() {
+        let mut p = pos("8/8/8/3pP3/8/8/8/4K2k w - - 0 1");
+        assert!(!p.legal_moves().iter().any(|m| m.is_en_passant));
+    }
+
+    // ── Promotions ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn pawn_push_to_back_rank_gives_four_promotions() {
+        let mut p = pos("8/P7/8/8/8/8/8/4K2k w - - 0 1");
+        assert_eq!(
+            p.legal_moves().iter().filter(|m| m.is_promotion()).count(),
+            4
+        );
+    }
+
+    #[test]
+    fn pawn_capture_promotion_gives_eight_promotions() {
+        // White pawn on a7, black knight on b8 — 4 push promotions + 4 capture promotions
+        let mut p = pos("1n6/P7/8/8/8/8/8/4K2k w - - 0 1");
+        assert_eq!(
+            p.legal_moves().iter().filter(|m| m.is_promotion()).count(),
+            8
+        );
+    }
+
+    // ── FEN parsing ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn fen_parses_side_to_move() {
+        assert_eq!(
+            pos("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").turn(),
+            Color::White
+        );
+        assert_eq!(
+            pos("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").turn(),
+            Color::Black
+        );
+    }
+
+    #[test]
+    fn evaluate_is_negated_for_black_to_move() {
+        // White has an extra pawn — evaluate() must be positive for white to move,
+        // negative for black to move, and the magnitudes must be equal.
+        let w = pos("8/8/8/8/8/8/P7/4K2k w - - 0 1");
+        let b = pos("8/8/8/8/8/8/P7/4K2k b - - 0 1");
+        assert!(w.evaluate() > 0);
+        assert!(b.evaluate() < 0);
+        assert_eq!(w.evaluate(), -b.evaluate());
+    }
+
+    // ── Perft ─────────────────────────────────────────────────────────────────
+
+    mod perft_tests {
+        use super::*;
+
+        #[test]
+        fn startpos_depth_1() {
+            assert_eq!(perft(&mut Position::new(), 1), 20);
+        }
+
+        #[test]
+        fn startpos_depth_2() {
+            assert_eq!(perft(&mut Position::new(), 2), 400);
+        }
+
+        #[test]
+        fn startpos_depth_3() {
+            assert_eq!(perft(&mut Position::new(), 3), 8_902);
+        }
+
+        #[test]
+        fn startpos_depth_4() {
+            assert_eq!(perft(&mut Position::new(), 4), 197_281);
+        }
+
+        #[test]
+        #[ignore]
+        fn startpos_depth_5() {
+            assert_eq!(perft(&mut Position::new(), 5), 4_865_609);
+        }
+
+        // Kiwipete — exercises castling, en passant, and promotions together
+        #[test]
+        fn kiwipete_depth_1() {
+            assert_eq!(
+                perft(
+                    &mut pos(
+                        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+                    ),
+                    1
+                ),
+                48
+            );
+        }
+
+        #[test]
+        fn kiwipete_depth_2() {
+            assert_eq!(
+                perft(
+                    &mut pos(
+                        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+                    ),
+                    2
+                ),
+                2_039
+            );
+        }
+
+        #[test]
+        fn kiwipete_depth_3() {
+            assert_eq!(
+                perft(
+                    &mut pos(
+                        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+                    ),
+                    3
+                ),
+                97_862
+            );
+        }
+
+        // Position 3 — stresses en passant pin edge cases
+        #[test]
+        fn position3_depth_1() {
+            assert_eq!(
+                perft(&mut pos("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"), 1),
+                14
+            );
+        }
+
+        #[test]
+        fn position3_depth_2() {
+            assert_eq!(
+                perft(&mut pos("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"), 2),
+                191
+            );
+        }
+
+        #[test]
+        fn position3_depth_3() {
+            assert_eq!(
+                perft(&mut pos("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"), 3),
+                2_812
+            );
+        }
+
+        #[test]
+        #[ignore]
+        fn position3_depth_5() {
+            assert_eq!(
+                perft(&mut pos("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"), 5),
+                674_624
+            );
+        }
+
+        // Position 5 — stresses promotions
+        #[test]
+        fn position5_depth_1() {
+            assert_eq!(
+                perft(
+                    &mut pos("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"),
+                    1
+                ),
+                44
+            );
+        }
+
+        #[test]
+        fn position5_depth_2() {
+            assert_eq!(
+                perft(
+                    &mut pos("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"),
+                    2
+                ),
+                1_486
+            );
+        }
+
+        #[test]
+        fn position5_depth_3() {
+            assert_eq!(
+                perft(
+                    &mut pos("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"),
+                    3
+                ),
+                62_379
+            );
+        }
+    }
+}
