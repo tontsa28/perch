@@ -125,3 +125,72 @@ pub(crate) struct Undo {
     pub(crate) halfmoves: u16,
     pub(crate) fullmoves: NonZeroU16,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_simple_move() {
+        let mv = Move::try_from("e2e4").unwrap();
+        assert_eq!(mv.from, 12); // e2: rank 1, file 4 → 1*8+4
+        assert_eq!(mv.to, 28); // e4: rank 3, file 4 → 3*8+4
+        assert!(!mv.is_promotion());
+        assert!(!mv.is_en_passant);
+        assert!(!mv.is_castle_kingside);
+        assert!(!mv.is_castle_queenside);
+    }
+
+    #[test]
+    fn parse_all_four_promotion_pieces() {
+        assert_eq!(
+            Move::try_from("a7a8q").unwrap().promotion,
+            Some(PieceKind::Queen)
+        );
+        assert_eq!(
+            Move::try_from("a7a8r").unwrap().promotion,
+            Some(PieceKind::Rook)
+        );
+        assert_eq!(
+            Move::try_from("a7a8b").unwrap().promotion,
+            Some(PieceKind::Bishop)
+        );
+        assert_eq!(
+            Move::try_from("a7a8n").unwrap().promotion,
+            Some(PieceKind::Knight)
+        );
+    }
+
+    #[test]
+    fn display_roundtrip() {
+        for s in ["a1h8", "e2e4", "d7d8q", "b2b1n", "h7h8r"] {
+            assert_eq!(Move::try_from(s).unwrap().to_string(), s);
+        }
+    }
+
+    #[test]
+    fn reject_wrong_length() {
+        assert!(Move::try_from("e2e").is_err());
+        assert!(Move::try_from("e2e4qq").is_err());
+    }
+
+    #[test]
+    fn reject_bad_file() {
+        assert!(Move::try_from("i2e4").is_err());
+        assert!(Move::try_from("e2z4").is_err());
+    }
+
+    #[test]
+    fn reject_bad_rank() {
+        assert!(Move::try_from("e0e4").is_err());
+        assert!(Move::try_from("e2e9").is_err());
+    }
+
+    #[test]
+    fn reject_king_and_pawn_as_promotion() {
+        // Neither king nor pawn are valid promotion targets
+        assert!(Move::try_from("e7e8k").is_err());
+        assert!(Move::try_from("e7e8p").is_err());
+        assert!(Move::try_from("e7e8x").is_err());
+    }
+}
