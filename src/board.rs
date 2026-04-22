@@ -399,3 +399,30 @@ impl TryFrom<&str> for Color {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn board(piece_placement: &str) -> Board {
+        Board::try_from(piece_placement).expect("valid piece placement")
+    }
+
+    #[test]
+    fn starting_position_is_symmetric() {
+        // Both sides are mirror images of each other, so the net score must be zero.
+        assert_eq!(Board::new().evaluate_material_pst(), 0);
+    }
+
+    #[test]
+    fn extra_white_pawn_scores_positive() {
+        // Starting position with black's a-pawn removed — white is up one pawn.
+        assert!(board("rnbqkbnr/1ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR").evaluate_material_pst() > 0);
+    }
+
+    #[test]
+    fn extra_black_pawn_scores_negative() {
+        // Starting position with white's a-pawn removed — black is up one pawn.
+        assert!(board("rnbqkbnr/pppppppp/8/8/8/8/1PPPPPPP/RNBQKBNR").evaluate_material_pst() < 0);
+    }
+}
