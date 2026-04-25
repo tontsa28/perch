@@ -1,5 +1,6 @@
 use crate::bitboard::Bitboard;
 
+/// Precomputed attacks for white pawns indexed by square.
 pub(crate) const WHITE_PAWN_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x0000_0000_0000_0200),
     Bitboard(0x0000_0000_0000_0500),
@@ -67,6 +68,7 @@ pub(crate) const WHITE_PAWN_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x0000_0000_0000_0000),
 ];
 
+/// Precomputed attacks for black pawns indexed by square.
 pub(crate) const BLACK_PAWN_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x0000_0000_0000_0000),
     Bitboard(0x0000_0000_0000_0000),
@@ -134,6 +136,7 @@ pub(crate) const BLACK_PAWN_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x0040_0000_0000_0000),
 ];
 
+/// Precomputed attacks for knights indexed by square.
 pub(crate) const KNIGHT_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x0000_0000_0002_0400),
     Bitboard(0x0000_0000_0005_0800),
@@ -201,6 +204,7 @@ pub(crate) const KNIGHT_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x0020_4000_0000_0000),
 ];
 
+/// Precomputed attacks for kings indexed by square.
 pub(crate) const KING_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x0000_0000_0000_0302),
     Bitboard(0x0000_0000_0000_0705),
@@ -268,6 +272,7 @@ pub(crate) const KING_ATTACKS: [Bitboard; 64] = [
     Bitboard(0x40c0_0000_0000_0000),
 ];
 
+/// All possible slider directions represented as compass points.
 pub(crate) const N: usize = 0;
 pub(crate) const S: usize = 1;
 pub(crate) const E: usize = 2;
@@ -279,23 +284,31 @@ pub(crate) const SW: usize = 7;
 
 pub(crate) const RAYS: [[u64; 8]; 64] = gen_rays();
 
+/// Check if file and rank produce a valid square on the board.
 const fn on_board(file: i8, rank: i8) -> bool {
     file >= 0 && file < 8 && rank >= 0 && rank < 8
 }
 
+/// Generate a ray towards a given direction.
 const fn gen_ray_from(sq: u8, df: i8, dr: i8) -> u64 {
     let mut mask = 0u64;
 
+    // Compute initial file and rank from the square integer
     let f0 = (sq % 8) as i8;
     let r0 = (sq / 8) as i8;
 
+    // Compute dynamic file and rank
     let mut f = f0 + df;
     let mut r = r0 + dr;
 
     while on_board(f, r) {
+        // Compute destination square
         let to = (r as u8) * 8 + (f as u8);
+
+        // Convert the destination square to a bitboard and combine it with the mask
         mask |= 1u64 << to;
 
+        // Increment to the next slider square
         f += df;
         r += dr;
     }
@@ -303,11 +316,13 @@ const fn gen_ray_from(sq: u8, df: i8, dr: i8) -> u64 {
     mask
 }
 
+/// Generate all rays, from all squares to all directions.
 const fn gen_rays() -> [[u64; 8]; 64] {
     let mut rays = [[0u64; 8]; 64];
     let mut sq = 0u8;
 
     while sq < 64 {
+        // Generate rays to all directions from the given square
         rays[sq as usize][N] = gen_ray_from(sq, 0, 1);
         rays[sq as usize][S] = gen_ray_from(sq, 0, -1);
         rays[sq as usize][E] = gen_ray_from(sq, 1, 0);
