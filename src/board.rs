@@ -7,7 +7,7 @@ use crate::{
     },
     bitboard::Bitboard,
     error::Error,
-    evals::MG,
+    evals::{EG, MG},
     piece::{PieceKind, PieceOnSquare, parse_piece},
 };
 
@@ -271,32 +271,44 @@ impl Board {
     }
 
     pub(crate) fn evaluate_material_pst(&self) -> i32 {
-        let mut score = 0;
         const VALUES: [i32; 6] = [100, 320, 330, 500, 900, 0];
+        const PHASE_WEIGHTS: [i32; 6] = [0, 1, 1, 2, 4, 0]; // P, N, B, R, Q, K
+        const TOTAL_PHASE: i32 = 24;
+
+        let mut mg_score = 0;
+        let mut eg_score = 0;
+        let mut phase = 0;
 
         for i in 0..=5 {
             let mut bb = self.pieces[i].0;
-            let value = &VALUES[i];
-            let pst = &MG[i];
+            let value = VALUES[i];
+            let mg_pst = &MG[i];
+            let eg_pst = &EG[i];
 
             while bb != 0 {
                 let sq = Self::pop_lsb(&mut bb) as usize;
-                score += value + pst[sq ^ 56];
+                mg_score += value + mg_pst[sq ^ 56];
+                eg_score += value + eg_pst[sq ^ 56];
+                phase += PHASE_WEIGHTS[i];
             }
         }
 
         for i in 6..=11 {
             let mut bb = self.pieces[i].0;
-            let value = &VALUES[i - 6];
-            let pst = &MG[i - 6];
+            let value = VALUES[i - 6];
+            let mg_pst = &MG[i - 6];
+            let eg_pst = &EG[i - 6];
 
             while bb != 0 {
                 let sq = Self::pop_lsb(&mut bb) as usize;
-                score -= value + pst[sq];
+                mg_score -= value + mg_pst[sq];
+                eg_score -= value + eg_pst[sq];
+                phase += PHASE_WEIGHTS[i - 6];
             }
         }
 
-        score
+        let phase = phase.min(TOTAL_PHASE);
+        (mg_score * phase + eg_score * (TOTAL_PHASE - phase)) / TOTAL_PHASE
     }
 }
 
