@@ -1,3 +1,4 @@
+/// Precomputed PST for pawns in middlegames.
 #[rustfmt::skip]
 pub(crate) const MG_PAWNS: [i32; 64] = [
       0,   0,   0,   0,   0,   0,   0,   0,
@@ -10,6 +11,7 @@ pub(crate) const MG_PAWNS: [i32; 64] = [
       0,   0,   0,   0,   0,   0,   0,   0,
 ];
 
+/// Precomputed PST for pawns in endgames.
 #[rustfmt::skip]
 pub(crate) const EG_PAWNS: [i32; 64] = [
       0,   0,   0,   0,   0,   0,   0,   0,
@@ -22,6 +24,7 @@ pub(crate) const EG_PAWNS: [i32; 64] = [
       0,   0,   0,   0,   0,   0,   0,   0,
 ];
 
+/// Precomputed PST for knights in middlegames.
 #[rustfmt::skip]
 pub(crate) const MG_KNIGHTS: [i32; 64] = [
     -167, -89, -34, -49,  61, -97, -15, -107,
@@ -34,6 +37,7 @@ pub(crate) const MG_KNIGHTS: [i32; 64] = [
     -105, -21, -58, -33, -17, -28, -19,  -23,
 ];
 
+/// Precomputed PST for knights in endgames.
 #[rustfmt::skip]
 pub(crate) const EG_KNIGHTS: [i32; 64] = [
     -58, -38, -13, -28, -31, -27, -63, -99,
@@ -46,6 +50,7 @@ pub(crate) const EG_KNIGHTS: [i32; 64] = [
     -29, -51, -23, -15, -22, -18, -50, -64,
 ];
 
+/// Precomputed PST for bishops in middlegames.
 #[rustfmt::skip]
 pub(crate) const MG_BISHOPS: [i32; 64] = [
     -29,   4, -82, -37, -25, -42,   7,  -8,
@@ -58,6 +63,7 @@ pub(crate) const MG_BISHOPS: [i32; 64] = [
     -33,  -3, -14, -21, -13, -12, -39, -21,
 ];
 
+/// Precomputed PST for bishops in endgames.
 #[rustfmt::skip]
 pub(crate) const EG_BISHOPS: [i32; 64] = [
     -14, -21, -11,  -8,  -7,  -9, -17, -24,
@@ -70,6 +76,7 @@ pub(crate) const EG_BISHOPS: [i32; 64] = [
     -23,  -9, -23,  -5,  -9, -16,  -5, -17,
 ];
 
+/// Precomputed PST for rooks in middlegames.
 #[rustfmt::skip]
 pub(crate) const MG_ROOKS: [i32; 64] = [
      32,  42,  32,  51,  63,   9,  31,  43,
@@ -82,6 +89,7 @@ pub(crate) const MG_ROOKS: [i32; 64] = [
     -19, -13,   1,  17,  16,   7, -37, -26,
 ];
 
+/// Precomputed PST for rooks in endgames.
 #[rustfmt::skip]
 pub(crate) const EG_ROOKS: [i32; 64] = [
     13,  10,  18,  15,  12,  12,   8,   5,
@@ -94,6 +102,7 @@ pub(crate) const EG_ROOKS: [i32; 64] = [
     -9,   2,   3,  -1,  -5, -13,   4, -20,
 ];
 
+/// Precomputed PST for queens in middlegames.
 #[rustfmt::skip]
 pub(crate) const MG_QUEENS: [i32; 64] = [
     -28,   0,  29,  12,  59,  44,  43,  45,
@@ -106,6 +115,7 @@ pub(crate) const MG_QUEENS: [i32; 64] = [
      -1, -18,  -9,  10, -15, -25, -31, -50,
 ];
 
+/// Precomputed PST for queens in endgames.
 #[rustfmt::skip]
 pub(crate) const EG_QUEENS: [i32; 64] = [
      -9,  22,  22,  27,  27,  19,  10,  20,
@@ -118,6 +128,7 @@ pub(crate) const EG_QUEENS: [i32; 64] = [
     -33, -28, -22, -43,  -5, -32, -20, -41,
 ];
 
+/// Precomputed PST for kings in middlegames.
 #[rustfmt::skip]
 pub(crate) const MG_KINGS: [i32; 64] = [
     -65,  23,  16, -15, -56, -34,   2,  13,
@@ -130,6 +141,7 @@ pub(crate) const MG_KINGS: [i32; 64] = [
     -15,  36,  12, -54,   8, -28,  24,  14,
 ];
 
+/// Precomputed PST for kings in endgames.
 #[rustfmt::skip]
 pub(crate) const EG_KINGS: [i32; 64] = [
     -74, -35, -18, -18, -11,  15,   4, -17,
@@ -142,10 +154,12 @@ pub(crate) const EG_KINGS: [i32; 64] = [
     -53, -34, -21, -11, -28, -14, -24, -43
 ];
 
+/// Convenience array of middlegame PSTs for index-based access.
 pub(crate) const MG: [[i32; 64]; 6] = [
     MG_PAWNS, MG_KNIGHTS, MG_BISHOPS, MG_ROOKS, MG_QUEENS, MG_KINGS,
 ];
 
+/// Convenience array of endgame PSTs for index-based access.
 pub(crate) const EG: [[i32; 64]; 6] = [
     EG_PAWNS, EG_KNIGHTS, EG_BISHOPS, EG_ROOKS, EG_QUEENS, EG_KINGS,
 ];
