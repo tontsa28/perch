@@ -45,7 +45,7 @@ pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move>
 
 fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) -> i32 {
     if depth == 0 {
-        return pos.evaluate();
+        return quiescence(pos, alpha, beta, ply);
     }
 
     let mut moves = pos.legal_moves();
@@ -84,31 +84,43 @@ fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) ->
     best
 }
 
-// fn quiescence(pos: Position, mut alpha: i32, beta: i32) -> i32 {
-//     let stand_pat = pos.evaluate();
+fn quiescence(pos: &mut Position, mut alpha: i32, beta: i32, ply: i32) -> i32 {
+    let in_check = pos.is_check(pos.turn());
 
-//     if stand_pat >= beta {
-//         return beta;
-//     }
+    if !in_check {
+        let stand_pat = pos.evaluate();
+        if stand_pat >= beta {
+            return stand_pat;
+        }
+        alpha = alpha.max(stand_pat);
+    }
 
-//     alpha = alpha.max(stand_pat);
+    let mut moves = pos.legal_moves();
 
-//     for mv in pos.legal_moves() {
-//         if !mv.is_capture() {
-//             continue;
-//         }
+    if moves.is_empty() {
+        return if in_check { -MATE + ply } else { 0 };
+    }
 
-//         let new_pos = pos.make_move_cloned(mv);
-//         let score = -quiescence(new_pos, -beta, -alpha);
+    if !in_check {
+        moves.retain(|m| pos.is_capture(*m));
+    }
 
-//         if score >= beta {
-//             return beta;
-//         }
-//         alpha = alpha.max(score);
-//     }
+    let mut best = if in_check { -INF } else { alpha };
 
-//     alpha
-// }
+    for mv in moves {
+        let undo = pos.make_move(mv);
+        let score = -quiescence(pos, -beta, -alpha, ply + 1);
+        pos.unmake_move(mv, undo);
+
+        best = best.max(score);
+        alpha = alpha.max(best);
+        if alpha >= beta {
+            return beta;
+        }
+    }
+
+    best
+}
 
 pub(crate) fn perft(pos: &mut Position, depth: u8) -> usize {
     if depth == 0 {
