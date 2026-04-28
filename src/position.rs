@@ -397,8 +397,8 @@ impl Position {
         moves
     }
 
-    pub(crate) fn board(&self) -> Board {
-        self.board
+    pub(crate) fn board(&self) -> &Board {
+        &self.board
     }
 
     pub(crate) fn turn(&self) -> Color {
