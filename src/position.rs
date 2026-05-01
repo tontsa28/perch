@@ -9,7 +9,7 @@ use crate::{
     piece::{PieceKind, PieceOnSquare},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct Position {
     board: Board,
     turn: Color,

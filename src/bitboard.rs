@@ -2,7 +2,7 @@ use std::ops::BitAnd;
 
 /// A set of squares represented as an unsigned 64-bit integer.
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct Bitboard(pub(crate) u64);
 
 impl BitAnd for Bitboard {

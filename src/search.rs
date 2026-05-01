@@ -1,17 +1,21 @@
+use std::collections::HashMap;
+
 use crate::{mov::Move, piece::PieceKind, position::Position};
 
 const INF: i32 = 1_073_741_824;
 const MATE: i32 = 536_870_912;
 
 pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move> {
-    let mut best = None;
+    let mut best_move = None;
+    let mut moves = pos.legal_moves();
+    let mut tt: HashMap<Position, Move> = HashMap::new();
 
     for d in 1..=depth {
         let mut best_score = -INF;
-        let mut moves = pos.legal_moves();
 
+        let tt_move = tt.get(pos);
         moves.sort_by_key(|m| {
-            if Some(*m) == best {
+            if Some(m) == tt_move {
                 0
             } else if m.is_promotion() {
                 1
@@ -29,28 +33,40 @@ pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move>
             }
         });
 
-        for mv in moves {
+        for mv in moves.iter().copied() {
             let undo = pos.make_move(mv);
-            let score = -search(pos, d - 1, -INF, -best_score, 1);
+            let score = -search(pos, d - 1, -INF, -best_score, 1, &mut tt);
             pos.unmake_move(mv, undo);
 
             if score > best_score {
                 best_score = score;
-                best = Some(mv);
+                best_move = Some(mv);
             }
+        }
+
+        if let Some(mv) = best_move {
+            tt.insert(*pos, mv);
         }
 
         println!(
             "info depth {d} score cp {best_score} pv {}",
-            best.map(|mv| mv.to_string())
+            best_move
+                .map(|mv| mv.to_string())
                 .unwrap_or(String::from("0000"))
         );
     }
 
-    best
+    best_move
 }
 
-fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) -> i32 {
+fn search(
+    pos: &mut Position,
+    depth: u8,
+    mut alpha: i32,
+    beta: i32,
+    ply: i32,
+    tt: &mut HashMap<Position, Move>,
+) -> i32 {
     if depth == 0 {
         return quiescence(pos, alpha, beta, ply);
     }
@@ -64,10 +80,12 @@ fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) ->
         }
     }
 
-    let mut best = -INF;
+    let tt_move = tt.get(pos);
     moves.sort_by_key(|m| {
-        if m.is_promotion() {
+        if Some(m) == tt_move {
             0
+        } else if m.is_promotion() {
+            1
         } else if pos.is_capture(*m) {
             let (_, attacker) = pos.board().piece_at(m.from).into();
             let victim = if m.is_en_passant {
@@ -82,10 +100,17 @@ fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) ->
         }
     });
 
+    let mut best = -INF;
+    let mut best_move = None;
+
     for mv in moves {
         let undo = pos.make_move(mv);
-        let eval = -search(pos, depth - 1, -beta, -alpha, ply + 1);
+        let eval = -search(pos, depth - 1, -beta, -alpha, ply + 1, tt);
         pos.unmake_move(mv, undo);
+
+        if eval > best {
+            best_move = Some(mv);
+        }
 
         best = best.max(eval);
         alpha = alpha.max(best);
@@ -93,6 +118,10 @@ fn search(pos: &mut Position, depth: u8, mut alpha: i32, beta: i32, ply: i32) ->
         if alpha >= beta {
             break;
         }
+    }
+
+    if let Some(mv) = best_move {
+        tt.insert(*pos, mv);
     }
 
     best

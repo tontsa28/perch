@@ -12,7 +12,7 @@ pub(crate) enum PieceKind {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum PieceOnSquare {
     Empty = 0,
     WhitePawn = 1,

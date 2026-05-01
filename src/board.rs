@@ -11,7 +11,7 @@ use crate::{
     piece::{PieceKind, PieceOnSquare, parse_piece},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct Board {
     pieces: [Bitboard; 12],
     squares: [PieceOnSquare; 64],
@@ -383,7 +383,7 @@ impl Display for Board {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Color {
     White,
     Black,
