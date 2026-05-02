@@ -35,7 +35,7 @@ pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move>
 
         for mv in moves.iter().copied() {
             let undo = pos.make_move(mv);
-            let score = -search(pos, d - 1, -INF, -best_score, 1, &mut tt);
+            let score = -search(pos, d - 1, -INF, -best_score, 1, &mut tt, false);
             pos.unmake_move(mv, undo);
 
             if score > best_score {
@@ -66,6 +66,7 @@ fn search(
     beta: i32,
     ply: i32,
     tt: &mut HashMap<Position, Move>,
+    last_was_null: bool,
 ) -> i32 {
     if depth == 0 {
         return quiescence(pos, alpha, beta, ply);
@@ -77,6 +78,19 @@ fn search(
             return -MATE + ply;
         } else {
             return 0;
+        }
+    }
+
+    let in_check = pos.is_check(pos.turn());
+    let has_non_pawns = pos.board().has_non_pawns(pos.turn());
+
+    if !in_check && !last_was_null && has_non_pawns && depth >= 3 {
+        let ep = pos.make_null_move();
+        let score = -search(pos, depth - 3, -beta, -beta + 1, ply + 1, tt, true);
+        pos.unmake_null_move(ep);
+
+        if score >= beta {
+            return score;
         }
     }
 
@@ -105,7 +119,7 @@ fn search(
 
     for mv in moves {
         let undo = pos.make_move(mv);
-        let eval = -search(pos, depth - 1, -beta, -alpha, ply + 1, tt);
+        let eval = -search(pos, depth - 1, -beta, -alpha, ply + 1, tt, false);
         pos.unmake_move(mv, undo);
 
         if eval > best {

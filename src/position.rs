@@ -591,6 +591,18 @@ impl Position {
         }
     }
 
+    pub(crate) fn make_null_move(&mut self) -> Option<u8> {
+        let ep = self.en_passant;
+        self.en_passant = None;
+        self.turn = !self.turn;
+        ep
+    }
+
+    pub(crate) fn unmake_null_move(&mut self, ep: Option<u8>) {
+        self.turn = !self.turn;
+        self.en_passant = ep;
+    }
+
     pub(crate) fn legal_moves(&mut self) -> Vec<Move> {
         let mut moves = Vec::with_capacity(64);
         let pseudo = self.gen_pseudo_legal_moves();

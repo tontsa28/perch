@@ -235,6 +235,17 @@ impl Board {
         (self.color_bitboard(!color).0 & mask) != 0
     }
 
+    pub(crate) fn has_non_pawns(&self, color: Color) -> bool {
+        match color {
+            Color::White => {
+                self.pieces[1] | self.pieces[2] | self.pieces[3] | self.pieces[4] != Bitboard(0)
+            }
+            Color::Black => {
+                self.pieces[7] | self.pieces[8] | self.pieces[9] | self.pieces[10] != Bitboard(0)
+            }
+        }
+    }
+
     pub(crate) fn piece_at(&self, target_sq: u8) -> PieceOnSquare {
         debug_assert!(target_sq < 64);
         self.squares[target_sq as usize]
