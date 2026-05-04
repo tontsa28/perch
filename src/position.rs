@@ -406,7 +406,7 @@ impl Position {
     }
 
     pub(crate) fn is_check(&self, color: Color) -> bool {
-        let king_sq = self.board.piece_square(color, PieceKind::King);
+        let king_sq = self.board.king_square(color);
         let attacker = !color;
         self.board.is_square_attacked(king_sq, attacker)
     }
