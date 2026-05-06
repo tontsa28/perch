@@ -536,4 +536,28 @@ mod tests {
         // Starting position with white's a-pawn removed — black is up one pawn
         assert!(board("rnbqkbnr/pppppppp/8/8/8/8/1PPPPPPP/RNBQKBNR").evaluate_material_pst() < 0);
     }
+
+    #[test]
+    fn has_non_pawns_works_for_minors_and_majors() {
+        // Only pawns + kings -> false for both sides
+        let b = board("8/8/8/8/8/8/PPPPPPPP/4K2k");
+        assert!(!b.has_non_pawns(Color::White));
+        assert!(!b.has_non_pawns(Color::Black));
+
+        // White has a rook -> true for white, false for black
+        let b = board("8/8/8/8/8/8/8/R3K2k");
+        assert!(b.has_non_pawns(Color::White));
+        assert!(!b.has_non_pawns(Color::Black));
+    }
+
+    #[test]
+    fn rook_attack_is_blocked_by_piece() {
+        // Unblocked rook on a1 attacks a8
+        let b = board("k7/8/8/8/8/8/8/R7");
+        assert!(b.is_square_attacked(56, Color::White));
+
+        // Blocked by a pawn on a4 -> no attack
+        let b = board("k7/8/8/8/p7/8/8/R7");
+        assert!(!b.is_square_attacked(56, Color::White));
+    }
 }

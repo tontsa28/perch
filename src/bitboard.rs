@@ -105,3 +105,51 @@ impl BitOrAssign for Bitboard {
         self.0 |= rhs.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bit_is_set_and_empty_flags() {
+        let bb = Bitboard::new(1u64 << 7);
+        assert!(bb.bit_is_set(7));
+        assert!(!bb.bit_is_set(6));
+        assert!(!bb.is_empty());
+        assert!(bb.is_not_empty());
+        assert!(Bitboard::EMPTY.is_empty());
+        assert!(!Bitboard::EMPTY.is_not_empty());
+    }
+
+    #[test]
+    fn lsb_and_msb_are_correct() {
+        let bb = Bitboard::new((1u64 << 5) | (1u64 << 12));
+        assert_eq!(bb.lsb_sq(), 5);
+        assert_eq!(bb.msb_sq(), 12);
+    }
+
+    #[test]
+    fn pop_lsb_pops_in_order() {
+        let mut bb = Bitboard::new((1u64 << 2) | (1u64 << 5) | (1u64 << 8));
+        assert_eq!(bb.pop_lsb(), 2);
+        assert_eq!(bb.pop_lsb(), 5);
+        assert_eq!(bb.pop_lsb(), 8);
+        assert!(bb.is_empty());
+    }
+
+    #[test]
+    fn bit_ops_work() {
+        let a = Bitboard::new(0b1010);
+        let b = Bitboard::new(0b0110);
+        assert_eq!(a & b, Bitboard::new(0b0010));
+        assert_eq!(a | b, Bitboard::new(0b1110));
+
+        let mut c = a;
+        c &= b;
+        assert_eq!(c, Bitboard::new(0b0010));
+
+        let mut d = a;
+        d |= b;
+        assert_eq!(d, Bitboard::new(0b1110));
+    }
+}

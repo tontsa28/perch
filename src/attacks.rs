@@ -291,7 +291,7 @@ const fn on_board(file: i8, rank: i8) -> bool {
 
 /// Generate a ray towards a given direction.
 const fn gen_ray_from(sq: u8, df: i8, dr: i8) -> Bitboard {
-    let mut mask = 0;
+    let mut mask = 0u64;
 
     // Compute initial file and rank from the square integer
     let f0 = (sq % 8) as i8;

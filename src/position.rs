@@ -38,7 +38,7 @@ impl Position {
 
     #[inline(always)]
     fn sq(file: i8, rank: i8) -> Option<u8> {
-        if (0..8).contains(&file) && (0..8).contains(&rank) {
+        if file >= 0 && file < 8 && rank >= 0 && rank < 8 {
             Some((rank as u8) * 8 + (file as u8))
         } else {
             None
@@ -781,6 +781,24 @@ mod tests {
         assert!(!p.legal_moves().iter().any(|m| m.is_castle_kingside));
     }
 
+    #[test]
+    fn rook_move_removes_queenside_castling_right() {
+        let mut p = pos("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+
+        // Move the a1 rook; queenside castling should be lost
+        let mv = p.parse_uci_move("a1a2").unwrap();
+        p.make_move(mv);
+
+        // Flip back to White to inspect castling options
+        let ep = p.make_null_move();
+        let moves = p.legal_moves();
+
+        assert!(!moves.iter().any(|m| m.is_castle_queenside));
+        assert!(moves.iter().any(|m| m.is_castle_kingside));
+
+        p.unmake_null_move(ep);
+    }
+
     // ── En passant ────────────────────────────────────────────────────────────
 
     #[test]
@@ -793,6 +811,14 @@ mod tests {
     #[test]
     fn en_passant_not_generated_without_target() {
         let mut p = pos("8/8/8/3pP3/8/8/8/4K2k w - - 0 1");
+        assert!(!p.legal_moves().iter().any(|m| m.is_en_passant));
+    }
+
+    #[test]
+    fn en_passant_illegal_if_it_exposes_king() {
+        // White pawn on e5, black pawn on d5, black rook on e8.
+        // En passant e5xd6 would open the e-file → illegal.
+        let mut p = pos("4r3/8/8/3pP3/8/8/8/4K3 w - d6 0 1");
         assert!(!p.legal_moves().iter().any(|m| m.is_en_passant));
     }
 
@@ -868,7 +894,6 @@ mod tests {
         }
 
         #[test]
-        #[ignore]
         fn startpos_depth_5() {
             assert_eq!(perft(&mut Position::new(), 5), 4_865_609);
         }
@@ -939,7 +964,6 @@ mod tests {
         }
 
         #[test]
-        #[ignore]
         fn position3_depth_5() {
             assert_eq!(
                 perft(&mut pos("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"), 5),

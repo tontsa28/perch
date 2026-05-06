@@ -133,8 +133,8 @@ mod tests {
     #[test]
     fn parse_simple_move() {
         let mv = Move::try_from("e2e4").unwrap();
-        assert_eq!(mv.from, 12); // e2: rank 1, file 4 → 1*8+4
-        assert_eq!(mv.to, 28); // e4: rank 3, file 4 → 3*8+4
+        assert_eq!(mv.from, 12); // e2: rank 1, file 4 -> 1*8+4
+        assert_eq!(mv.to, 28); // e4: rank 3, file 4 -> 3*8+4
         assert!(!mv.is_promotion());
         assert!(!mv.is_en_passant);
         assert!(!mv.is_castle_kingside);
