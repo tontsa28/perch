@@ -60,56 +60,24 @@ impl Board {
         // Set bitboards to precomputed values
         Self {
             pieces: [
-                Bitboard(0xff00),
-                Bitboard(0x42),
-                Bitboard(0x24),
-                Bitboard(0x81),
-                Bitboard(0x8),
-                Bitboard(0x10),
-                Bitboard(0x00ff_0000_0000_0000),
-                Bitboard(0x4200_0000_0000_0000),
-                Bitboard(0x2400_0000_0000_0000),
-                Bitboard(0x8100_0000_0000_0000),
-                Bitboard(0x0800_0000_0000_0000),
-                Bitboard(0x1000_0000_0000_0000),
+                Bitboard::new(0xff00),
+                Bitboard::new(0x42),
+                Bitboard::new(0x24),
+                Bitboard::new(0x81),
+                Bitboard::new(0x8),
+                Bitboard::new(0x10),
+                Bitboard::new(0x00ff_0000_0000_0000),
+                Bitboard::new(0x4200_0000_0000_0000),
+                Bitboard::new(0x2400_0000_0000_0000),
+                Bitboard::new(0x8100_0000_0000_0000),
+                Bitboard::new(0x0800_0000_0000_0000),
+                Bitboard::new(0x1000_0000_0000_0000),
             ],
             squares,
-            white: Bitboard(0xffff),
-            black: Bitboard(0xffff_0000_0000_0000),
-            occupied: Bitboard(0xffff_0000_0000_ffff),
+            white: Bitboard::new(0xffff),
+            black: Bitboard::new(0xffff_0000_0000_0000),
+            occupied: Bitboard::new(0xffff_0000_0000_ffff),
         }
-    }
-
-    /// Check if there is a piece on the given square.
-    #[inline(always)]
-    fn bit_is_set(bb: u64, sq: u8) -> bool {
-        // Right shift bitboard integer sq times (so that square bit becomes LSB),
-        // then compute AND against a 1-bit
-        ((bb >> sq) & 1) != 0
-    }
-
-    /// Get the square with the smallest index.
-    #[inline(always)]
-    fn lsb_sq(bb: u64) -> u8 {
-        // Count trailing zeros to get LSB square
-        bb.trailing_zeros() as u8
-    }
-
-    /// Get the square with the largest index.
-    #[inline(always)]
-    fn msb_sq(bb: u64) -> u8 {
-        // Count leading zeros to get MSB square
-        (63 - bb.leading_zeros()) as u8
-    }
-
-    /// Pop the LSB of the bitboard.
-    #[inline(always)]
-    fn pop_lsb(bb: &mut u64) -> u8 {
-        // Get LSB square, then remove it
-        let sq = bb.trailing_zeros() as u8;
-        *bb &= *bb - 1;
-
-        sq
     }
 
     /// Get the index of a piece bitboard.
@@ -124,16 +92,16 @@ impl Board {
 
     /// Get the first blocker on a ray.
     #[inline(always)]
-    fn first_blocker_on_ray(occupied: u64, ray: u64, increasing: bool) -> Option<u8> {
+    fn first_blocker_on_ray(&self, ray: Bitboard, increasing: bool) -> Option<u8> {
         // Compute AND between occupied pieces and ray to find blockers
-        let blockers = occupied & ray;
+        let blockers = self.occupied & ray;
 
-        if blockers == 0 {
+        if blockers.is_empty() {
             None
         } else if increasing {
-            Some(Self::lsb_sq(blockers))
+            Some(blockers.lsb_sq())
         } else {
-            Some(Self::msb_sq(blockers))
+            Some(blockers.msb_sq())
         }
     }
 
@@ -149,7 +117,7 @@ impl Board {
         };
 
         // Compute AND between pawn attacks and pawns to find attacking pawns
-        (mask & pawns) != Bitboard(0)
+        (mask & pawns).is_not_empty()
     }
 
     /// Check if a square is attacked by a knight.
@@ -161,7 +129,7 @@ impl Board {
         let mask = KNIGHT_ATTACKS[target_sq as usize];
 
         // Compute AND between knight attacks and knights to find attacking knights
-        (mask & knights) != Bitboard(0)
+        (mask & knights).is_not_empty()
     }
 
     /// Check if a square is attacked by a diagonally moving piece (bishop or queen).
@@ -184,8 +152,8 @@ impl Board {
 
         for (ray, increasing) in diagonals {
             // Check if first blocker is a diagonally moving slider piece
-            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing)
-                && Self::bit_is_set(sliders.0, blocker_sq)
+            if let Some(blocker_sq) = self.first_blocker_on_ray(ray, increasing)
+                && sliders.bit_is_set(blocker_sq)
             {
                 return true;
             }
@@ -214,8 +182,8 @@ impl Board {
 
         for (ray, increasing) in orthogonals {
             // Check if first blocker is an orthogonally moving slider piece
-            if let Some(blocker_sq) = Self::first_blocker_on_ray(self.occupied.0, ray, increasing)
-                && Self::bit_is_set(sliders.0, blocker_sq)
+            if let Some(blocker_sq) = self.first_blocker_on_ray(ray, increasing)
+                && sliders.bit_is_set(blocker_sq)
             {
                 return true;
             }
@@ -233,7 +201,7 @@ impl Board {
         let mask = KING_ATTACKS[target_sq as usize];
 
         // Compute AND between king attacks and king to find attacking king
-        (mask & king) != Bitboard(0)
+        (mask & king).is_not_empty()
     }
 
     /// Get a piece bitboard by its color and kind.
@@ -254,10 +222,10 @@ impl Board {
         let king = self.piece_bitboard(color, PieceKind::King);
 
         // DEBUG: make sure there is exactly one king
-        debug_assert_eq!(king.0.count_ones(), 1);
+        debug_assert_eq!(king.count_ones(), 1);
 
         // Find king square
-        Self::lsb_sq(king.0)
+        king.lsb_sq()
     }
 
     /// Check if a square is attacked.
@@ -276,10 +244,10 @@ impl Board {
         debug_assert!(target_sq < 64);
 
         // Convert square into a bitboard
-        let mask = 1u64 << target_sq;
+        let mask = Bitboard::new(1u64 << target_sq);
 
         // Compute AND between square and occupied squares to find its occupancy
-        (self.occupied.0 & mask) == 0
+        (self.occupied & mask).is_empty()
     }
 
     /// Check if a square contains a friendly piece.
@@ -287,10 +255,10 @@ impl Board {
         debug_assert!(target_sq < 64);
 
         // Convert square into a bitboard
-        let mask = 1u64 << target_sq;
+        let mask = Bitboard::new(1u64 << target_sq);
 
         // Compute AND between square and squares occupied by us to find its friendliness
-        (self.color_bitboard(color).0 & mask) != 0
+        (self.color_bitboard(color) & mask).is_not_empty()
     }
 
     /// Check if a square contains an enemy piece.
@@ -298,20 +266,20 @@ impl Board {
         debug_assert!(target_sq < 64);
 
         // Convert square into a bitboard
-        let mask = 1u64 << target_sq;
+        let mask = Bitboard::new(1u64 << target_sq);
 
         // Compute AND between square and squares occupied by our enemy to find its friendliness
-        (self.color_bitboard(!color).0 & mask) != 0
+        (self.color_bitboard(!color) & mask).is_not_empty()
     }
 
     /// Check if white or black has material beyond pawns and a king.
     pub(crate) fn has_non_pawns(&self, color: Color) -> bool {
         match color {
             Color::White => {
-                self.pieces[1] | self.pieces[2] | self.pieces[3] | self.pieces[4] != Bitboard(0)
+                (self.pieces[1] | self.pieces[2] | self.pieces[3] | self.pieces[4]).is_not_empty()
             }
             Color::Black => {
-                self.pieces[7] | self.pieces[8] | self.pieces[9] | self.pieces[10] != Bitboard(0)
+                (self.pieces[7] | self.pieces[8] | self.pieces[9] | self.pieces[10]).is_not_empty()
             }
         }
     }
@@ -328,21 +296,21 @@ impl Board {
         debug_assert!(target_sq < 64);
 
         // Convert square into a bitboard
-        let mask = 1u64 << target_sq;
+        let mask = Bitboard::new(1u64 << target_sq);
 
         // Update piece bitboard and square
         let idx = Self::bitboard_index(color, kind);
-        self.pieces[idx].0 &= !mask;
+        self.pieces[idx] &= !mask;
         self.squares[target_sq as usize] = PieceOnSquare::Empty;
 
         // Update color bitboard
         match color {
-            Color::White => self.white.0 &= !mask,
-            Color::Black => self.black.0 &= !mask,
+            Color::White => self.white &= !mask,
+            Color::Black => self.black &= !mask,
         }
 
         // Update occupied bitboard
-        self.occupied.0 &= !mask;
+        self.occupied &= !mask;
     }
 
     /// Add a piece to the board.
@@ -350,21 +318,21 @@ impl Board {
         debug_assert!(target_sq < 64);
 
         // Convert square into a bitboard
-        let mask = 1u64 << target_sq;
+        let mask = Bitboard::new(1u64 << target_sq);
 
         // Update piece bitboard and square
         let idx = Self::bitboard_index(color, kind);
-        self.pieces[idx].0 |= mask;
+        self.pieces[idx] |= mask;
         self.squares[target_sq as usize] = PieceOnSquare::from((color, kind));
 
         // Update color bitboard
         match color {
-            Color::White => self.white.0 |= mask,
-            Color::Black => self.black.0 |= mask,
+            Color::White => self.white |= mask,
+            Color::Black => self.black |= mask,
         }
 
         // Update occupied bitboard
-        self.occupied.0 |= mask;
+        self.occupied |= mask;
     }
 
     /// Evaluate the board based on material and piece-square tables (PSTs).
@@ -381,14 +349,14 @@ impl Board {
         // Process white pieces
         for i in 0..=5 {
             // Get piece bitboard, piece value and PSTs
-            let mut bb = self.pieces[i].0;
+            let mut bb = self.pieces[i];
             let value = VALUES[i];
             let mg_pst = &MG[i];
             let eg_pst = &EG[i];
 
-            while bb != 0 {
+            while !bb.is_empty() {
                 // Take out LSB square
-                let sq = Self::pop_lsb(&mut bb) as usize;
+                let sq = bb.pop_lsb() as usize;
 
                 // Update middlegame and endgame scores,
                 // sq ^ 56 mirrors square index as PSTs are indexed from black's perspective
@@ -402,14 +370,14 @@ impl Board {
         for i in 6..=11 {
             // Get piece bitboard, piece value and PSTs,
             // subtract 6 to match piece kind
-            let mut bb = self.pieces[i].0;
+            let mut bb = self.pieces[i];
             let value = VALUES[i - 6];
             let mg_pst = &MG[i - 6];
             let eg_pst = &EG[i - 6];
 
-            while bb != 0 {
+            while !bb.is_empty() {
                 // Take out LSB square
-                let sq = Self::pop_lsb(&mut bb) as usize;
+                let sq = bb.pop_lsb() as usize;
 
                 // Update middlegame and endgame scores
                 mg_score -= value + mg_pst[sq];
@@ -438,11 +406,11 @@ impl TryFrom<&str> for Board {
         let mut file: u8 = 0;
 
         // Set all bitboards and square to empty
-        let mut pieces = [Bitboard(0); 12];
+        let mut pieces = [Bitboard::EMPTY; 12];
         let mut squares = [PieceOnSquare::Empty; 64];
-        let mut white = Bitboard(0);
-        let mut black = Bitboard(0);
-        let mut occupied = Bitboard(0);
+        let mut white = Bitboard::EMPTY;
+        let mut black = Bitboard::EMPTY;
+        let mut occupied = Bitboard::EMPTY;
 
         for c in pos.chars() {
             if c.is_ascii_digit() {
@@ -455,20 +423,20 @@ impl TryFrom<&str> for Board {
             } else if let Some((ps, color, kind)) = parse_piece(c) {
                 // Compute square from rank and file, then convert it into a bitboard
                 let sq = rank * 8 + file;
-                let mask = 1u64 << sq;
+                let mask = Bitboard::new(1u64 << sq);
 
                 // Insert piece to square and update piece bitboard
                 squares[sq as usize] = ps;
-                pieces[Self::bitboard_index(color, kind)].0 |= mask;
+                pieces[Self::bitboard_index(color, kind)] |= mask;
 
                 // Update color bitboard
                 match color {
-                    Color::White => white.0 |= mask,
-                    Color::Black => black.0 |= mask,
+                    Color::White => white |= mask,
+                    Color::Black => black |= mask,
                 }
 
                 // Update occupied bitboard
-                occupied.0 |= mask;
+                occupied |= mask;
 
                 file += 1;
             } else {

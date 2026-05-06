@@ -86,16 +86,12 @@ impl Position {
     fn gen_slider_moves(
         &self,
         color: Color,
-        bitboard: Bitboard,
+        mut bb: Bitboard,
         directions: &[(i8, i8)],
         moves: &mut Vec<Move>,
     ) {
-        let mut bb = bitboard.0;
-
-        while bb != 0 {
-            let from = bb.trailing_zeros() as u8;
-            bb &= bb - 1;
-
+        while !bb.is_empty() {
+            let from = bb.pop_lsb();
             let (f0, r0) = Self::file_rank(from);
 
             for &(df, dr) in directions {
@@ -128,17 +124,15 @@ impl Position {
     }
 
     fn gen_pawn_moves(&self, color: Color, moves: &mut Vec<Move>) {
-        let mut pawns = self.board.piece_bitboard(color, PieceKind::Pawn).0;
+        let mut pawns = self.board.piece_bitboard(color, PieceKind::Pawn);
 
         let (push_delta, start_rank, promo_rank) = match color {
             Color::White => (1i8, 1i8, 7i8),
             Color::Black => (-1i8, 6i8, 0i8),
         };
 
-        while pawns != 0 {
-            let from = pawns.trailing_zeros() as u8;
-            pawns &= pawns - 1;
-
+        while !pawns.is_empty() {
+            let from = pawns.pop_lsb();
             let (f, r) = Self::file_rank(from);
 
             if let Some(one_step) = Self::sq(f, r + push_delta)
@@ -210,7 +204,7 @@ impl Position {
     }
 
     fn gen_knight_moves(&self, color: Color, moves: &mut Vec<Move>) {
-        let mut knights = self.board.piece_bitboard(color, PieceKind::Knight).0;
+        let mut knights = self.board.piece_bitboard(color, PieceKind::Knight);
 
         const OFFSETS: [(i8, i8); 8] = [
             (-2, -1),
@@ -223,10 +217,8 @@ impl Position {
             (2, 1),
         ];
 
-        while knights != 0 {
-            let from = knights.trailing_zeros() as u8;
-            knights &= knights - 1;
-
+        while !knights.is_empty() {
+            let from = knights.pop_lsb();
             let (f, r) = Self::file_rank(from);
 
             for (df, dr) in OFFSETS {
@@ -276,9 +268,9 @@ impl Position {
     }
 
     fn gen_king_moves(&self, color: Color, moves: &mut Vec<Move>) {
-        let king = self.board.piece_bitboard(color, PieceKind::King).0;
+        let king = self.board.piece_bitboard(color, PieceKind::King);
 
-        if king == 0 {
+        if king.is_empty() {
             return;
         }
 
@@ -314,8 +306,9 @@ impl Position {
                     if self.can_castle_kingside()
                         && self.board.is_empty(5)
                         && self.board.is_empty(6)
-                        && self.board.piece_bitboard(Color::White, PieceKind::Rook).0 & (1u64 << 7)
-                            != 0
+                        && (self.board.piece_bitboard(Color::White, PieceKind::Rook)
+                            & Bitboard::new(1u64 << 7))
+                        .is_not_empty()
                     {
                         moves.push(Move {
                             from,
@@ -331,8 +324,9 @@ impl Position {
                         && self.board.is_empty(3)
                         && self.board.is_empty(2)
                         && self.board.is_empty(1)
-                        && self.board.piece_bitboard(Color::White, PieceKind::Rook).0 & (1u64 << 0)
-                            != 0
+                        && (self.board.piece_bitboard(Color::White, PieceKind::Rook)
+                            & Bitboard::new(1u64 << 0))
+                        .is_not_empty()
                     {
                         moves.push(Move {
                             from,
@@ -350,8 +344,9 @@ impl Position {
                     if self.can_castle_kingside()
                         && self.board.is_empty(61)
                         && self.board.is_empty(62)
-                        && self.board.piece_bitboard(Color::Black, PieceKind::Rook).0 & (1u64 << 63)
-                            != 0
+                        && (self.board.piece_bitboard(Color::Black, PieceKind::Rook)
+                            & Bitboard::new(1u64 << 63))
+                        .is_not_empty()
                     {
                         moves.push(Move {
                             from,
@@ -367,8 +362,9 @@ impl Position {
                         && self.board.is_empty(59)
                         && self.board.is_empty(58)
                         && self.board.is_empty(57)
-                        && self.board.piece_bitboard(Color::Black, PieceKind::Rook).0 & (1u64 << 56)
-                            != 0
+                        && (self.board.piece_bitboard(Color::Black, PieceKind::Rook)
+                            & Bitboard::new(1u64 << 56))
+                        .is_not_empty()
                     {
                         moves.push(Move {
                             from,

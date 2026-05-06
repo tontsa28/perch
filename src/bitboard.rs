@@ -1,9 +1,82 @@
-use std::ops::{BitAnd, BitOr};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not};
 
 /// A set of squares represented as an unsigned 64-bit integer.
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct Bitboard(pub(crate) u64);
+pub(crate) struct Bitboard(u64);
+
+impl Bitboard {
+    pub(crate) const EMPTY: Self = Self(0);
+
+    /// Create a new bitboard from an unsigned 64-bit integer.
+    pub(crate) const fn new(bb: u64) -> Self {
+        Bitboard(bb)
+    }
+
+    /// Check if there is a piece on the given square.
+    #[inline(always)]
+    pub(crate) fn bit_is_set(self, sq: u8) -> bool {
+        // Right shift bitboard integer sq times (so that square bit becomes LSB),
+        // then compute AND against a 1-bit
+        ((self.0 >> sq) & 1) != 0
+    }
+
+    /// Get the square with the smallest index.
+    #[inline(always)]
+    pub(crate) fn lsb_sq(self) -> u8 {
+        // Count trailing zeros to get LSB square
+        self.0.trailing_zeros() as u8
+    }
+
+    /// Get the square with the largest index.
+    #[inline(always)]
+    pub(crate) fn msb_sq(self) -> u8 {
+        // Count leading zeros to get MSB square
+        (63 - self.0.leading_zeros()) as u8
+    }
+
+    /// Pop the LSB of the bitboard.
+    #[inline(always)]
+    pub(crate) fn pop_lsb(&mut self) -> u8 {
+        // Get LSB square, then remove it
+        let sq = self.0.trailing_zeros() as u8;
+        self.0 &= self.0 - 1;
+
+        sq
+    }
+
+    /// Returns `true` if the bitboard contains no pieces.
+    #[inline(always)]
+    pub(crate) fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    /// Returns `true` if the bitboard contains one or more pieces.
+    #[inline(always)]
+    pub(crate) fn is_not_empty(self) -> bool {
+        self.0 != 0
+    }
+
+    /// Returns the number of set bits in this bitboard.
+    #[inline(always)]
+    pub(crate) fn count_ones(self) -> u32 {
+        self.0.count_ones()
+    }
+
+    /// Returns the number of trailing 0-bits in this bitboard.
+    #[inline(always)]
+    pub(crate) fn trailing_zeros(self) -> u32 {
+        self.0.trailing_zeros()
+    }
+}
+
+impl Not for Bitboard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self(!self.0)
+    }
+}
 
 impl BitAnd for Bitboard {
     type Output = Self;
@@ -18,5 +91,17 @@ impl BitOr for Bitboard {
 
     fn bitor(self, rhs: Self) -> Self::Output {
         Self(self.0 | rhs.0)
+    }
+}
+
+impl BitAndAssign for Bitboard {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0
+    }
+}
+
+impl BitOrAssign for Bitboard {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0
     }
 }
