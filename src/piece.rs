@@ -1,5 +1,6 @@
 use crate::board::Color;
 
+/// A kind of a chess piece, e.g. a pawn or a king.
 #[repr(usize)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum PieceKind {
@@ -11,6 +12,7 @@ pub(crate) enum PieceKind {
     King = 5,
 }
 
+/// The state of a square, either empty or some colored piece.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum PieceOnSquare {
@@ -90,6 +92,7 @@ impl From<PieceOnSquare> for (Color, PieceKind) {
     }
 }
 
+/// Convert a color-specific piece character into `(PieceOnSquare, Color, PieceKind)`, if possible.
 pub(crate) fn parse_piece(c: char) -> Option<(PieceOnSquare, Color, PieceKind)> {
     match c {
         'P' => Some((PieceOnSquare::WhitePawn, Color::White, PieceKind::Pawn)),
