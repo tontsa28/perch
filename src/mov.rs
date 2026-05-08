@@ -2,6 +2,7 @@ use std::{fmt::Display, num::NonZeroU16};
 
 use crate::{board::Color, error::Error, piece::PieceKind};
 
+/// A representation of a chess move.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Move {
     pub(crate) from: u8,
@@ -13,6 +14,7 @@ pub(crate) struct Move {
 }
 
 impl Move {
+    /// Convert a square into UCI format (e.g. 0 -> a1).
     #[inline(always)]
     fn sq_to_uci(sq: u8) -> (char, char) {
         let file = (b'a' + (sq % 8)) as char;
@@ -20,6 +22,7 @@ impl Move {
         (file, rank)
     }
 
+    /// Get the UCI promotion character of a piece.
     #[inline(always)]
     fn promo_char(p: PieceKind) -> Option<char> {
         match p {
@@ -31,6 +34,7 @@ impl Move {
         }
     }
 
+    /// Convert a UCI file character to a file number.
     #[inline(always)]
     fn file_char_to_u8(c: u8) -> Option<u8> {
         if (b'a'..=b'h').contains(&c) {
@@ -40,6 +44,7 @@ impl Move {
         }
     }
 
+    /// Convert a UCI rank character to a rank number.
     #[inline(always)]
     fn rank_char_to_u8(c: u8) -> Option<u8> {
         if (b'1'..=b'8').contains(&c) {
@@ -49,6 +54,7 @@ impl Move {
         }
     }
 
+    /// Convert a UCI promotion character into `PieceKind`.
     #[inline(always)]
     fn promo_from_char(c: u8) -> Option<PieceKind> {
         match c {
@@ -60,12 +66,14 @@ impl Move {
         }
     }
 
+    /// Check if this move is a promotion move.
     pub(crate) fn is_promotion(&self) -> bool {
         self.promotion.is_some()
     }
 }
 
 impl Display for Move {
+    /// Display the `Move` as an UCI-formatted move.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (ff, fr) = Self::sq_to_uci(self.from);
         let (tf, tr) = Self::sq_to_uci(self.to);
@@ -85,21 +93,26 @@ impl Display for Move {
 impl TryFrom<&str> for Move {
     type Error = Error;
 
+    /// Convert a UCI-formatted move into `Move`.
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let b = value.as_bytes();
 
+        // If string length is not 4 or 5, it cannot be a valid UCI move
         if b.len() != 4 && b.len() != 5 {
             return Err("Invalid UCI move length")?;
         }
 
+        // Get file-rank pairs for origin square and destionation square
         let ff = Self::file_char_to_u8(b[0]).ok_or("Invalid from file")?;
         let fr = Self::rank_char_to_u8(b[1]).ok_or("Invalid from rank")?;
         let tf = Self::file_char_to_u8(b[2]).ok_or("Invalid to file")?;
         let tr = Self::rank_char_to_u8(b[3]).ok_or("Invalid to rank")?;
 
+        // Compute square indices from file-rank pairs
         let from = fr * 8 + ff;
         let to = tr * 8 + tf;
 
+        // If string length is 5, extract its promotion piece
         let promotion = if b.len() == 5 {
             Some(Self::promo_from_char(b[4]).ok_or("Invalid promotion piece")?)
         } else {
@@ -117,6 +130,7 @@ impl TryFrom<&str> for Move {
     }
 }
 
+/// Undo a chess move.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Undo {
     pub(crate) captured: Option<(Color, PieceKind, u8)>,
