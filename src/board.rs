@@ -22,7 +22,7 @@ pub(crate) struct Board {
 }
 
 impl Board {
-    /// Initialize the standard chess starting position.
+    /// Initialize the board at the standard chess starting position.
     pub(crate) fn new() -> Self {
         // Set all squares to empty
         let mut squares = [PieceOnSquare::Empty; 64];

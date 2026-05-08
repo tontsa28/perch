@@ -9,6 +9,7 @@ use crate::{
     piece::{PieceKind, PieceOnSquare},
 };
 
+/// A representation of a full chess position.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct Position {
     board: Board,
@@ -20,11 +21,13 @@ pub(crate) struct Position {
 }
 
 impl Position {
+    // Constants for handling castling rights
     const WK: u8 = 1 << 0;
     const WQ: u8 = 1 << 1;
     const BK: u8 = 1 << 2;
     const BQ: u8 = 1 << 3;
 
+    /// Initialize the standard chess starting position.
     pub(crate) fn new() -> Self {
         Self {
             board: Board::new(),
@@ -36,6 +39,7 @@ impl Position {
         }
     }
 
+    /// Convert a file-rank pair into a square.
     #[inline(always)]
     fn sq(file: i8, rank: i8) -> Option<u8> {
         if file >= 0 && file < 8 && rank >= 0 && rank < 8 {
@@ -45,11 +49,13 @@ impl Position {
         }
     }
 
+    /// Convert a square into a file-rank pair.
     #[inline(always)]
     fn file_rank(sq: u8) -> (i8, i8) {
         ((sq % 8) as i8, (sq / 8) as i8)
     }
 
+    /// Push promotion moves into the move buffer.
     #[inline(always)]
     fn push_promotion_set(moves: &mut Vec<Move>, from: u8, to: u8, is_en_passant: bool) {
         for promo in [
@@ -69,20 +75,27 @@ impl Position {
         }
     }
 
+    /// Check if we can castle kingside.
     fn can_castle_kingside(&self) -> bool {
+        // Compute AND between castling rights and kingside castling right
+        // to find if move is still legal to play
         match self.turn {
             Color::White => self.castling & Self::WK != 0,
             Color::Black => self.castling & Self::BK != 0,
         }
     }
 
+    /// Check if we can castle queenside.
     fn can_castle_queenside(&self) -> bool {
+        // Compute AND between castling rights and queenside castling right
+        // to find if move is still legal to play
         match self.turn {
             Color::White => self.castling & Self::WQ != 0,
             Color::Black => self.castling & Self::BQ != 0,
         }
     }
 
+    /// Generate all slider moves (bishop + rook + queen).
     fn gen_slider_moves(
         &self,
         color: Color,
@@ -91,14 +104,19 @@ impl Position {
         moves: &mut Vec<Move>,
     ) {
         while !bb.is_empty() {
+            // Pop square with lowest index and get its initial file-rank coordinates
             let from = bb.pop_lsb();
             let (f0, r0) = Self::file_rank(from);
 
+            // Process all directions
             for &(df, dr) in directions {
+                // Compute first destination square in current direction
                 let mut f = f0 + df;
                 let mut r = r0 + dr;
 
+                // Process further squares in same direction
                 while let Some(to) = Self::sq(f, r) {
+                    // If current destination square contains a friendly piece, stop processing
                     if self.board.has_friend(to, color) {
                         break;
                     }
@@ -112,6 +130,7 @@ impl Position {
                         is_castle_queenside: false,
                     });
 
+                    // If current destination square contains an enemy piece, stop processing
                     if self.board.has_enemy(to, color) {
                         break;
                     }
@@ -123,24 +142,29 @@ impl Position {
         }
     }
 
+    /// Generate all pawn moves.
     fn gen_pawn_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let mut pawns = self.board.piece_bitboard(color, PieceKind::Pawn);
 
+        // Determine direction of pushing, initial rank, and promotion rank
         let (push_delta, start_rank, promo_rank) = match color {
             Color::White => (1i8, 1i8, 7i8),
             Color::Black => (-1i8, 6i8, 0i8),
         };
 
         while !pawns.is_empty() {
+            // Pop pawn with lowest index and get its initial file-rank coordinates
             let from = pawns.pop_lsb();
             let (f, r) = Self::file_rank(from);
 
+            // Check if pawn can be pushed once
             if let Some(one_step) = Self::sq(f, r + push_delta)
                 && self.board.is_empty(one_step)
             {
                 let (_, to_rank) = Self::file_rank(one_step);
 
                 if to_rank == promo_rank {
+                    // Generate all promotion moves
                     Self::push_promotion_set(moves, from, one_step, false);
                 } else {
                     moves.push(Move {
@@ -152,6 +176,7 @@ impl Position {
                         is_castle_queenside: false,
                     });
 
+                    // Check if pawn is at its initial rank and can be pushed twice
                     if r == start_rank
                         && let Some(two_step) = Self::sq(f, r + 2 * push_delta)
                         && self.board.is_empty(two_step)
@@ -168,12 +193,15 @@ impl Position {
                 }
             }
 
+            // Process both capturable squares
             for df in [-1i8, 1i8] {
                 if let Some(to) = Self::sq(f + df, r + push_delta) {
                     let (_, to_rank) = Self::file_rank(to);
 
+                    // Check if destination square contains an enemy piece
                     if self.board.has_enemy(to, color) {
                         if to_rank == promo_rank {
+                            // Generate all promotion moves
                             Self::push_promotion_set(moves, from, to, false);
                         } else {
                             moves.push(Move {
@@ -185,9 +213,12 @@ impl Position {
                                 is_castle_queenside: false,
                             });
                         }
+
+                        // Skip to next capture as a normal capture cannot be en passant
                         continue;
                     }
 
+                    // Check if destination square is en passant square
                     if self.en_passant == Some(to) {
                         moves.push(Move {
                             from,
@@ -203,9 +234,11 @@ impl Position {
         }
     }
 
+    /// Generate all knight moves.
     fn gen_knight_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let mut knights = self.board.piece_bitboard(color, PieceKind::Knight);
 
+        // Construct move coordinate offsets
         const OFFSETS: [(i8, i8); 8] = [
             (-2, -1),
             (-2, 1),
@@ -218,11 +251,14 @@ impl Position {
         ];
 
         while !knights.is_empty() {
+            // Pop knight with lowest index and get its initial file-rank coordinates
             let from = knights.pop_lsb();
             let (f, r) = Self::file_rank(from);
 
+            // Process all offsets
             for (df, dr) in OFFSETS {
                 if let Some(to) = Self::sq(f + df, r + dr) {
+                    // If current destination square contains a friendly piece, skip it
                     if self.board.has_friend(to, color) {
                         continue;
                     }
@@ -240,20 +276,31 @@ impl Position {
         }
     }
 
+    /// Generate all bishop moves.
     fn gen_bishop_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let bishops = self.board.piece_bitboard(color, PieceKind::Bishop);
+
+        // Construct diagonal move directions
         const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+
         self.gen_slider_moves(color, bishops, &DIAG, moves);
     }
 
+    /// Generate all rook moves.
     fn gen_rook_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let rooks = self.board.piece_bitboard(color, PieceKind::Rook);
+
+        // Construct orthogonal move directions
         const ORTHO: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
         self.gen_slider_moves(color, rooks, &ORTHO, moves);
     }
 
+    /// Generate all queen moves.
     fn gen_queen_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let queens = self.board.piece_bitboard(color, PieceKind::Queen);
+
+        // Construct orthodiagonal move directions
         const ORTHODIAG: [(i8, i8); 8] = [
             (-1, -1),
             (-1, 1),
@@ -264,26 +311,33 @@ impl Position {
             (0, -1),
             (0, 1),
         ];
+
         self.gen_slider_moves(color, queens, &ORTHODIAG, moves);
     }
 
+    /// Generate all king moves.
     fn gen_king_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let king = self.board.piece_bitboard(color, PieceKind::King);
 
+        // This is a safeguard and should not be possible in any legal chess position
         if king.is_empty() {
             return;
         }
 
-        let from = king.trailing_zeros() as u8;
+        // Get king square and its initial file-rank coordinates
+        let from = king.lsb_sq();
         let (f, r) = Self::file_rank(from);
 
+        // Process all directions
         for df in -1..=1 {
             for dr in -1..=1 {
+                // Skip center square in which king is currently positioned
                 if df == 0 && dr == 0 {
                     continue;
                 }
 
                 if let Some(to) = Self::sq(f + df, r + dr) {
+                    // If current destination square contains a friendly piece, skip it
                     if self.board.has_friend(to, color) {
                         continue;
                     }
@@ -300,9 +354,14 @@ impl Position {
             }
         }
 
+        // Process castling moves
         match color {
             Color::White => {
+                // Square 4 = e1
                 if from == 4 {
+                    // Squares 5 = f1, 6 = g1
+                    // Compute AND between rook bitboard and a bitboard with square 7 = h1 set
+                    // to find if there is a rook in h1
                     if self.can_castle_kingside()
                         && self.board.is_empty(5)
                         && self.board.is_empty(6)
@@ -320,6 +379,9 @@ impl Position {
                         });
                     }
 
+                    // Squares 3 = d1, 2 = c1, 1 = b1
+                    // Compute AND between rook bitboard and a bitboard with square 0 = a1 set
+                    // to find if there is a rook in a1
                     if self.can_castle_queenside()
                         && self.board.is_empty(3)
                         && self.board.is_empty(2)
@@ -340,7 +402,11 @@ impl Position {
                 }
             }
             Color::Black => {
+                // Square 60 = e8
                 if from == 60 {
+                    // Squares 61 = f8, 62 = g8
+                    // Compute AND between rook bitboard and a bitboard with square 63 = h8 set
+                    // to find if there is a rook in h8
                     if self.can_castle_kingside()
                         && self.board.is_empty(61)
                         && self.board.is_empty(62)
@@ -358,6 +424,9 @@ impl Position {
                         });
                     }
 
+                    // Squares 59 = d8, 58 = c8, 57 = b8
+                    // Compute AND between rook bitboard and a bitboard with square 56 = a8 set
+                    // to find if there is a rook in a8
                     if self.can_castle_queenside()
                         && self.board.is_empty(59)
                         && self.board.is_empty(58)
@@ -380,7 +449,9 @@ impl Position {
         }
     }
 
-    fn gen_pseudo_legal_moves(&self) -> Vec<Move> {
+    /// Generate all pseudo-legal moves (ignoring checks).
+    fn pseudo_legal_moves(&self) -> Vec<Move> {
+        // Preallocate memory for 64 moves to avoid allocation overhead
         let mut moves = Vec::with_capacity(64);
 
         self.gen_pawn_moves(self.turn, &mut moves);
@@ -393,21 +464,28 @@ impl Position {
         moves
     }
 
+    /// Get a reference to the associated `Board`.
     pub(crate) fn board(&self) -> &Board {
         &self.board
     }
 
+    /// Check whose turn it is.
     pub(crate) fn turn(&self) -> Color {
         self.turn
     }
 
+    /// Check if the king is in check.
     pub(crate) fn is_check(&self, color: Color) -> bool {
-        let king_sq = self.board.king_square(color);
+        // Checker is always our opponent
         let attacker = !color;
+        let king_sq = self.board.king_square(color);
+
         self.board.is_square_attacked(king_sq, attacker)
     }
 
+    /// Play a move in the current position.
     pub(crate) fn make_move(&mut self, mv: Move) -> Undo {
+        // Gather all information required to restore this position
         let us = self.turn;
         let mut undo = Undo {
             captured: None,
@@ -423,6 +501,7 @@ impl Position {
         let mut is_capture = false;
 
         if mv.is_en_passant {
+            // Get capture square by adding or subtracting a rank from destination square
             let cap_sq = match us {
                 Color::White => mv.to - 8,
                 Color::Black => mv.to + 8,
@@ -434,6 +513,7 @@ impl Position {
                 debug_assert_eq!(cap_color, !us);
                 debug_assert_eq!(cap_kind, PieceKind::Pawn);
 
+                // Remove captured piece from board
                 self.board.remove_piece(cap_color, cap_kind, cap_sq);
                 undo.captured = Some((cap_color, cap_kind, cap_sq));
                 is_capture = true;
@@ -445,11 +525,13 @@ impl Position {
             let (cap_color, cap_kind) = cap_ps.into();
             debug_assert_eq!(cap_color, !us);
 
+            // Remove captured piece from board
             self.board.remove_piece(cap_color, cap_kind, mv.to);
             undo.captured = Some((cap_color, cap_kind, mv.to));
             is_capture = true;
         }
 
+        // Move piece to its new position or place a new piece on board upon promotion
         self.board.remove_piece(us, moving_kind, mv.from);
         let placed_kind = mv.promotion.unwrap_or(moving_kind);
         self.board.add_piece(us, placed_kind, mv.to);
@@ -457,10 +539,12 @@ impl Position {
         if mv.is_castle_kingside {
             match us {
                 Color::White => {
+                    // Move rook from 7 = h1 to 5 = f1 upon castling
                     self.board.remove_piece(Color::White, PieceKind::Rook, 7);
                     self.board.add_piece(Color::White, PieceKind::Rook, 5);
                 }
                 Color::Black => {
+                    // Move rook from 63 = h8 to 61 = f8 upon castling
                     self.board.remove_piece(Color::Black, PieceKind::Rook, 63);
                     self.board.add_piece(Color::Black, PieceKind::Rook, 61);
                 }
@@ -468,10 +552,12 @@ impl Position {
         } else if mv.is_castle_queenside {
             match us {
                 Color::White => {
+                    // Move rook from 0 = a1 to 3 = d1 upon castling
                     self.board.remove_piece(Color::White, PieceKind::Rook, 0);
                     self.board.add_piece(Color::White, PieceKind::Rook, 3);
                 }
                 Color::Black => {
+                    // Move rook from 56 = a8 to 59 = d8 upon castling
                     self.board.remove_piece(Color::Black, PieceKind::Rook, 56);
                     self.board.add_piece(Color::Black, PieceKind::Rook, 59);
                 }
@@ -480,9 +566,12 @@ impl Position {
 
         match us {
             Color::White => {
+                // If king is moved, revoke its castling rights
                 if moving_kind == PieceKind::King {
                     self.castling &= !(Self::WK | Self::WQ);
                 }
+
+                // If a rook is moved, revoke castling rights depending on its side
                 if moving_kind == PieceKind::Rook {
                     if mv.from == 7 {
                         self.castling &= !Self::WK;
@@ -492,9 +581,12 @@ impl Position {
                 }
             }
             Color::Black => {
+                // If king is moved, revoke its castling rights
                 if moving_kind == PieceKind::King {
                     self.castling &= !(Self::BK | Self::BQ);
                 }
+
+                // If a rook is moved, revoke castling rights depending on its side
                 if moving_kind == PieceKind::Rook {
                     if mv.from == 63 {
                         self.castling &= !Self::BK;
@@ -506,6 +598,7 @@ impl Position {
         }
 
         if !mv.is_en_passant {
+            // If a rook is captured on its starting corner, revoke respective castling right
             match mv.to {
                 7 => self.castling &= !Self::WK,
                 0 => self.castling &= !Self::WQ,
@@ -517,6 +610,7 @@ impl Position {
 
         self.en_passant = None;
         if moving_kind == PieceKind::Pawn {
+            // If a pawn is pushed two squares, set en passant square to intermediate square
             let delta = (mv.to as i16) - (mv.from as i16);
             if delta == 16 || delta == -16 {
                 let ep = ((mv.from as u16 + mv.to as u16) / 2) as u8;
@@ -524,12 +618,15 @@ impl Position {
             }
         }
 
+        // If a pawn is moved or a piece is captured,
+        // restart halfmove counter, otherwise increment it
         if moving_kind == PieceKind::Pawn || is_capture {
             self.halfmoves = 0;
         } else {
             self.halfmoves = self.halfmoves.saturating_add(1);
         }
 
+        // Increment fullmove counter upon black's move
         if us == Color::Black {
             self.fullmoves = self.fullmoves.saturating_add(1);
         }
@@ -539,6 +636,7 @@ impl Position {
         undo
     }
 
+    /// Restore the position after a move.
     pub(crate) fn unmake_move(&mut self, mv: Move, undo: Undo) {
         self.turn = !self.turn;
         let us = self.turn;
@@ -551,10 +649,12 @@ impl Position {
         if mv.is_castle_kingside {
             match us {
                 Color::White => {
+                    // Revert castling by moving rook from 5 = f1 to 7 = h1
                     self.board.remove_piece(Color::White, PieceKind::Rook, 5);
                     self.board.add_piece(Color::White, PieceKind::Rook, 7);
                 }
                 Color::Black => {
+                    // Revert castling by moving rook from 61 = f8 to 63 = h8
                     self.board.remove_piece(Color::Black, PieceKind::Rook, 61);
                     self.board.add_piece(Color::Black, PieceKind::Rook, 63);
                 }
@@ -562,10 +662,12 @@ impl Position {
         } else if mv.is_castle_queenside {
             match us {
                 Color::White => {
+                    // Revert castling by moving rook from 3 = d1 to 0 = a1
                     self.board.remove_piece(Color::White, PieceKind::Rook, 3);
                     self.board.add_piece(Color::White, PieceKind::Rook, 0);
                 }
                 Color::Black => {
+                    // Revert castling by moving rook from 59 = d8 to 56 = a8
                     self.board.remove_piece(Color::Black, PieceKind::Rook, 59);
                     self.board.add_piece(Color::Black, PieceKind::Rook, 56);
                 }
@@ -573,20 +675,26 @@ impl Position {
         }
 
         if let Some(promoted_to) = mv.promotion {
+            // Revert promotion by removing promoted piece
+            // and adding promoted pawn back to its previous square
             self.board.remove_piece(us, promoted_to, mv.to);
             self.board.add_piece(us, PieceKind::Pawn, mv.from);
         } else {
             let (c, k) = self.board.piece_at(mv.to).into();
             debug_assert_eq!(c, us);
+
+            // Revert move by moving piece back to its previous square
             self.board.remove_piece(us, k, mv.to);
             self.board.add_piece(us, k, mv.from);
         }
 
         if let Some((cap_color, cap_kind, cap_sq)) = undo.captured {
+            // Add a captured piece back to its original square
             self.board.add_piece(cap_color, cap_kind, cap_sq);
         }
     }
 
+    /// Play a null move in the current position.
     pub(crate) fn make_null_move(&mut self) -> Option<u8> {
         let ep = self.en_passant;
         self.en_passant = None;
@@ -594,18 +702,22 @@ impl Position {
         ep
     }
 
+    /// Restore the position after a null move.
     pub(crate) fn unmake_null_move(&mut self, ep: Option<u8>) {
         self.turn = !self.turn;
         self.en_passant = ep;
     }
 
+    /// Generate all legal moves in the current position.
     pub(crate) fn legal_moves(&mut self) -> Vec<Move> {
+        // Preallocate memory for 64 moves to avoid allocation overhead
         let mut moves = Vec::with_capacity(64);
-        let pseudo = self.gen_pseudo_legal_moves();
+        let pseudo = self.pseudo_legal_moves();
         let us = self.turn;
 
         for mv in pseudo {
             if mv.is_castle_kingside || mv.is_castle_queenside {
+                // Determine required free squares when castling
                 let (start_sq, transit_sq, dest_sq) =
                     match (us, mv.is_castle_kingside, mv.is_castle_queenside) {
                         (Color::White, true, false) => (4, 5, 6),
@@ -614,6 +726,8 @@ impl Position {
                         (Color::Black, false, true) => (60, 59, 58),
                         _ => unreachable!("castle move must be exactly one side"),
                     };
+
+                // If any square is attacked, skip castling move as it is illegal
                 if self.board.is_square_attacked(start_sq, !us)
                     || self.board.is_square_attacked(transit_sq, !us)
                     || self.board.is_square_attacked(dest_sq, !us)
@@ -622,6 +736,7 @@ impl Position {
                 }
             }
 
+            // Add move to legal moves if it doesn't expose our king to a check
             let undo = self.make_move(mv);
             if !self.is_check(us) {
                 moves.push(mv);
@@ -632,6 +747,7 @@ impl Position {
         moves
     }
 
+    /// Convert the evaluation to the side-to-move perspective.
     pub(crate) fn evaluate(&self) -> i32 {
         match self.turn {
             Color::White => self.board.evaluate_material_pst(),
@@ -639,15 +755,18 @@ impl Position {
         }
     }
 
+    /// Convert a UCI-formatted move string into `Move` if it is legal in the current position.
     pub(crate) fn parse_uci_move(&mut self, s: &str) -> Result<Move> {
         let raw = Move::try_from(s)?;
 
+        // Look for a matching move within legal moves
         self.legal_moves()
             .into_iter()
             .find(|m| m.from == raw.from && m.to == raw.to && m.promotion == raw.promotion)
             .ok_or_else(|| "Illegal move".into())
     }
 
+    /// Check if a `Move` is a capture in the current position.
     pub(crate) fn is_capture(&self, mv: Move) -> bool {
         mv.is_en_passant || self.board.has_enemy(mv.to, self.turn)
     }
@@ -656,6 +775,7 @@ impl Position {
 impl TryFrom<&str> for Position {
     type Error = Error;
 
+    /// Convert a FEN string into `Position`.
     fn try_from(value: &str) -> StdResult<Self, Self::Error> {
         let parts: Vec<&str> = value.split_whitespace().collect();
         let pos_str = *parts.first().unwrap();
@@ -665,6 +785,7 @@ impl TryFrom<&str> for Position {
         let halfmoves_str = *parts.get(4).unwrap_or(&"0");
         let fullmoves_str = *parts.get(5).unwrap_or(&"1");
 
+        // Construct castling rights
         let mut castling: u8 = 0;
         if castling_str.contains('K') {
             castling |= 1u8 << 0;
@@ -679,10 +800,13 @@ impl TryFrom<&str> for Position {
             castling |= 1u8 << 3;
         }
 
+        // Construct en passant
         let mut en_passant: Option<u8> = None;
         if en_passant_str != "-" {
             let bytes = en_passant_str.as_bytes();
 
+            // Get file and rank by subtracting integer representations
+            // of 'a' and '1' from first two bytes
             let file = bytes[0] - b'a';
             let rank = bytes[1] - b'1';
 
@@ -725,8 +849,8 @@ mod tests {
 
     #[test]
     fn make_unmake_is_invertible() {
-        // After making and immediately unmaking every legal move the position
-        // must be byte-for-byte identical to before, verified via perft.
+        // After making and immediately unmaking every legal move,
+        // position must be byte-for-byte identical to before, verified via perft
         let mut p = Position::new();
         let before = perft(&mut p, 3);
         for mv in p.legal_moves() {
@@ -785,7 +909,7 @@ mod tests {
     fn rook_move_removes_queenside_castling_right() {
         let mut p = pos("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
 
-        // Move the a1 rook; queenside castling should be lost
+        // Move a1 rook; queenside castling should be lost
         let mv = p.parse_uci_move("a1a2").unwrap();
         p.make_move(mv);
 
@@ -816,8 +940,8 @@ mod tests {
 
     #[test]
     fn en_passant_illegal_if_it_exposes_king() {
-        // White pawn on e5, black pawn on d5, black rook on e8.
-        // En passant e5xd6 would open the e-file → illegal.
+        // White pawn on e5, black pawn on d5, black rook on e8
+        // En passant e5xd6 would open e-file -> illegal
         let mut p = pos("4r3/8/8/3pP3/8/8/8/4K3 w - d6 0 1");
         assert!(!p.legal_moves().iter().any(|m| m.is_en_passant));
     }
@@ -860,7 +984,7 @@ mod tests {
     #[test]
     fn evaluate_is_negated_for_black_to_move() {
         // White has an extra pawn — evaluate() must be positive for white to move,
-        // negative for black to move, and the magnitudes must be equal.
+        // negative for black to move, and magnitudes must be equal
         let w = pos("8/8/8/8/8/8/P7/4K2k w - - 0 1");
         let b = pos("8/8/8/8/8/8/P7/4K2k b - - 0 1");
         assert!(w.evaluate() > 0);

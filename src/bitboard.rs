@@ -62,12 +62,6 @@ impl Bitboard {
     pub(crate) fn count_ones(self) -> u32 {
         self.0.count_ones()
     }
-
-    /// Returns the number of trailing 0-bits in this bitboard.
-    #[inline(always)]
-    pub(crate) fn trailing_zeros(self) -> u32 {
-        self.0.trailing_zeros()
-    }
 }
 
 impl Not for Bitboard {
