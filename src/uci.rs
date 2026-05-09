@@ -6,17 +6,20 @@ use crate::{
     search::{iterative_deepening, perft},
 };
 
+/// The entrypoint to the UCI interface.
 pub(crate) struct Uci {
     chess: Position,
 }
 
 impl Uci {
+    /// Initialize a new UCI interface.
     pub(crate) fn new() -> Self {
         Self {
             chess: Position::new(),
         }
     }
 
+    /// Run the UCI interface (effectively the same as running the program).
     pub(crate) fn run(&mut self) {
         println!(
             "Perch v{}, run 'help' to get more information",
@@ -28,6 +31,7 @@ impl Uci {
         for line in stdin.lines() {
             let line = line.unwrap();
 
+            // Attempt to convert line into a UCI command
             match UciCommand::try_from(line.as_str()) {
                 Ok(cmd) => match cmd {
                     UciCommand::Display => println!("{}", self.chess.board()),
@@ -44,17 +48,22 @@ impl Uci {
         }
     }
 
+    /// The 'go' command.
     fn go(&mut self, depth: Option<u8>) -> String {
+        // Run iterative deepening with 6 as default depth and convert move into a string
         iterative_deepening(&mut self.chess, depth.unwrap_or(6))
             .map(|m| m.to_string())
             .unwrap_or(String::from("0000"))
     }
 
+    /// The 'perft' command.
     fn perft(&mut self, depth: Option<u8>) -> usize {
+        // Run perft with 0 as default depth (count only root node)
         perft(&mut self.chess, depth.unwrap_or(0))
     }
 }
 
+/// A valid UCI command.
 pub(crate) enum UciCommand {
     Display,
     Help,
@@ -67,9 +76,11 @@ pub(crate) enum UciCommand {
 impl TryFrom<&str> for UciCommand {
     type Error = Error;
 
+    /// Convert a string into a `UciCommand`.
     fn try_from(line: &str) -> StdResult<Self, Self::Error> {
         let line = line.trim();
 
+        // Map string commands into their respective UciCommand counterparts
         match line {
             "d" => Ok(Self::Display),
             "help" => Ok(Self::Help),
@@ -90,14 +101,17 @@ impl TryFrom<&str> for UciCommand {
 }
 
 impl UciCommand {
+    /// The default starting position FEN string.
     const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+    /// Parse the 'position' command and its parameters.
     fn position(line: &str) -> Result<Self> {
         let mut parts = line.split_whitespace();
 
-        // Panic if the first part is not position
+        // Make sure command starts with 'position' and also consume it
         assert_eq!(parts.next(), Some("position"));
 
+        // Capture FEN if provided
         let fen_str = match parts.next() {
             Some("startpos") => Self::STARTPOS,
             Some("fen") => {
@@ -107,14 +121,17 @@ impl UciCommand {
             _ => "",
         };
 
+        // Capture all moves if provided
         let moves = if parts.next() == Some("moves") {
             parts.collect::<Vec<&str>>()
         } else {
             Vec::with_capacity(0)
         };
 
+        // Attempt to convert captured FEN into a `Position`
         let mut position = Position::try_from(fen_str)?;
 
+        // Play all captured moves to get to final position
         for mv in moves {
             let m = position.parse_uci_move(mv).unwrap();
             position.make_move(m);
@@ -123,11 +140,14 @@ impl UciCommand {
         Ok(Self::Position(position))
     }
 
+    /// Parse the 'go' command and its parameters.
     fn go(line: &str) -> Result<Self> {
         let mut parts = line.split_whitespace();
 
+        // Make sure command starts with 'go' and also consume it
         assert_eq!(parts.next(), Some("go"));
 
+        // Capture depth if provided
         if parts.next() == Some("depth") {
             let depth = parts.next().map(|s| s.parse::<u8>()).transpose()?;
             return Ok(Self::Go { depth });
@@ -136,11 +156,14 @@ impl UciCommand {
         Ok(Self::Go { depth: None })
     }
 
+    /// Parse the 'perft' command and its parameters.
     fn perft(line: &str) -> Result<Self> {
         let mut parts = line.split_whitespace();
 
+        // Make sure command starts with 'perft' and also consume it
         assert_eq!(parts.next(), Some("perft"));
 
+        // Capture depth if provided
         if let Some(arg) = parts.next() {
             let depth = arg.parse::<u8>().ok();
             return Ok(Self::Perft { depth });
