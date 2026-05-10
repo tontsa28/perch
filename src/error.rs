@@ -4,6 +4,7 @@ use std::{
 
 pub(crate) type Result<T> = StdResult<T, Error>;
 
+/// Error type used throughout the engine.
 #[derive(Debug)]
 pub(crate) struct Error {
     kind: ErrorKind,
@@ -11,7 +12,14 @@ pub(crate) struct Error {
 }
 
 impl Error {
-    // Creates a new instance of `Error`.
+    /// Create a new `Error` instance.
+    ///
+    /// # Parameters
+    /// - `kind`: High-level category of the error.
+    /// - `source`: The underlying error value.
+    ///
+    /// # Returns
+    /// A new `Error` wrapping `source`.
     pub(crate) fn new<E>(kind: ErrorKind, source: E) -> Self
     where
         E: Into<Box<dyn StdError + Send + Sync + 'static>>,

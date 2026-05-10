@@ -13,6 +13,9 @@ pub(crate) struct Uci {
 
 impl Uci {
     /// Initialize a new UCI interface.
+    ///
+    /// # Returns
+    /// A `Uci` instance with the starting position loaded.
     pub(crate) fn new() -> Self {
         Self {
             chess: Position::new(),
@@ -20,6 +23,9 @@ impl Uci {
     }
 
     /// Run the UCI interface (effectively the same as running the program).
+    ///
+    /// # Returns
+    /// Nothing. This function runs until input ends or `quit` is received.
     pub(crate) fn run(&mut self) {
         println!(
             "Perch v{}, run 'help' to get more information",
@@ -48,7 +54,13 @@ impl Uci {
         }
     }
 
-    /// The 'go' command.
+    /// Execute the `go` command and return the best move.
+    ///
+    /// # Parameters
+    /// - `depth`: Optional search depth in plies. Defaults to 6 when `None`.
+    ///
+    /// # Returns
+    /// The best move in UCI format, or `0000` if no move exists.
     fn go(&mut self, depth: Option<u8>) -> String {
         // Run iterative deepening with 6 as default depth and convert move into a string
         iterative_deepening(&mut self.chess, depth.unwrap_or(6))
@@ -56,7 +68,13 @@ impl Uci {
             .unwrap_or(String::from("0000"))
     }
 
-    /// The 'perft' command.
+    /// Execute the `perft` command.
+    ///
+    /// # Parameters
+    /// - `depth`: Optional perft depth. Defaults to 0 when `None`.
+    ///
+    /// # Returns
+    /// The node count at the given depth.
     fn perft(&mut self, depth: Option<u8>) -> usize {
         // Run perft with 0 as default depth (count only root node)
         perft(&mut self.chess, depth.unwrap_or(0))
@@ -77,6 +95,12 @@ impl TryFrom<&str> for UciCommand {
     type Error = Error;
 
     /// Convert a string into a `UciCommand`.
+    ///
+    /// # Parameters
+    /// - `line`: Raw input line from the user.
+    ///
+    /// # Returns
+    /// A parsed `UciCommand`, or an error if the command is unknown.
     fn try_from(line: &str) -> StdResult<Self, Self::Error> {
         let line = line.trim();
 
@@ -104,7 +128,13 @@ impl UciCommand {
     /// The default starting position FEN string.
     const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    /// Parse the 'position' command and its parameters.
+    /// Parse the `position` command and its parameters.
+    ///
+    /// # Parameters
+    /// - `line`: Full `position` command line.
+    ///
+    /// # Returns
+    /// A `UciCommand::Position` with the resulting position, or an error.
     fn position(line: &str) -> Result<Self> {
         let mut parts = line.split_whitespace();
 
@@ -140,7 +170,13 @@ impl UciCommand {
         Ok(Self::Position(position))
     }
 
-    /// Parse the 'go' command and its parameters.
+    /// Parse the `go` command and its parameters.
+    ///
+    /// # Parameters
+    /// - `line`: Full `go` command line.
+    ///
+    /// # Returns
+    /// A `UciCommand::Go` with the parsed depth (if any).
     fn go(line: &str) -> Result<Self> {
         let mut parts = line.split_whitespace();
 
@@ -156,7 +192,13 @@ impl UciCommand {
         Ok(Self::Go { depth: None })
     }
 
-    /// Parse the 'perft' command and its parameters.
+    /// Parse the `perft` command and its parameters.
+    ///
+    /// # Parameters
+    /// - `line`: Full `perft` command line.
+    ///
+    /// # Returns
+    /// A `UciCommand::Perft` with the parsed depth (if any).
     fn perft(line: &str) -> Result<Self> {
         let mut parts = line.split_whitespace();
 

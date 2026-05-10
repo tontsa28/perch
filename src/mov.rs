@@ -15,6 +15,12 @@ pub(crate) struct Move {
 
 impl Move {
     /// Convert a square into UCI format (e.g. 0 -> a1).
+    ///
+    /// # Parameters
+    /// - `sq`: Square index in the range 0..64.
+    ///
+    /// # Returns
+    /// A `(file, rank)` pair as characters.
     #[inline(always)]
     fn sq_to_uci(sq: u8) -> (char, char) {
         let file = (b'a' + (sq % 8)) as char;
@@ -23,6 +29,12 @@ impl Move {
     }
 
     /// Get the UCI promotion character of a piece.
+    ///
+    /// # Parameters
+    /// - `p`: Piece kind to convert.
+    ///
+    /// # Returns
+    /// The UCI promotion character (`n`, `b`, `r`, `q`), or `None` if invalid.
     #[inline(always)]
     fn promo_char(p: PieceKind) -> Option<char> {
         match p {
@@ -35,6 +47,12 @@ impl Move {
     }
 
     /// Convert a UCI file character to a file number.
+    ///
+    /// # Parameters
+    /// - `c`: ASCII file character (`a`..`h`).
+    ///
+    /// # Returns
+    /// The file index (0..7), or `None` if invalid.
     #[inline(always)]
     fn file_char_to_u8(c: u8) -> Option<u8> {
         if (b'a'..=b'h').contains(&c) {
@@ -45,6 +63,12 @@ impl Move {
     }
 
     /// Convert a UCI rank character to a rank number.
+    ///
+    /// # Parameters
+    /// - `c`: ASCII rank character (`1`..`8`).
+    ///
+    /// # Returns
+    /// The rank index (0..7), or `None` if invalid.
     #[inline(always)]
     fn rank_char_to_u8(c: u8) -> Option<u8> {
         if (b'1'..=b'8').contains(&c) {
@@ -55,6 +79,12 @@ impl Move {
     }
 
     /// Convert a UCI promotion character into `PieceKind`.
+    ///
+    /// # Parameters
+    /// - `c`: ASCII promotion character (`n`, `b`, `r`, `q`).
+    ///
+    /// # Returns
+    /// The corresponding `PieceKind`, or `None` if invalid.
     #[inline(always)]
     fn promo_from_char(c: u8) -> Option<PieceKind> {
         match c {
@@ -67,6 +97,9 @@ impl Move {
     }
 
     /// Check if this move is a promotion move.
+    ///
+    /// # Returns
+    /// `true` if the move contains a promotion piece.
     pub(crate) fn is_promotion(&self) -> bool {
         self.promotion.is_some()
     }
@@ -74,6 +107,12 @@ impl Move {
 
 impl Display for Move {
     /// Display the `Move` as an UCI-formatted move.
+    ///
+    /// # Parameters
+    /// - `f`: Formatter sink.
+    ///
+    /// # Returns
+    /// A formatting result.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (ff, fr) = Self::sq_to_uci(self.from);
         let (tf, tr) = Self::sq_to_uci(self.to);
@@ -94,6 +133,12 @@ impl TryFrom<&str> for Move {
     type Error = Error;
 
     /// Convert a UCI-formatted move into `Move`.
+    ///
+    /// # Parameters
+    /// - `value`: UCI move string (e.g. `e2e4`, `e7e8q`).
+    ///
+    /// # Returns
+    /// A parsed `Move`, or an error if the string is invalid.
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let b = value.as_bytes();
 

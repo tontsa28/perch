@@ -285,11 +285,26 @@ pub(crate) const SW: usize = 7;
 pub(crate) const RAYS: [[Bitboard; 8]; 64] = gen_rays();
 
 /// Check if file and rank produce a valid square on the board.
+///
+/// # Parameters
+/// - `file`: File index (0..7).
+/// - `rank`: Rank index (0..7).
+///
+/// # Returns
+/// `true` if `(file, rank)` is on the board.
 const fn on_board(file: i8, rank: i8) -> bool {
     file >= 0 && file < 8 && rank >= 0 && rank < 8
 }
 
 /// Generate a ray towards a given direction.
+///
+/// # Parameters
+/// - `sq`: Origin square.
+/// - `df`: File delta per step.
+/// - `dr`: Rank delta per step.
+///
+/// # Returns
+/// A bitboard containing all squares on the ray.
 const fn gen_ray_from(sq: u8, df: i8, dr: i8) -> Bitboard {
     let mut mask = 0u64;
 
@@ -317,6 +332,9 @@ const fn gen_ray_from(sq: u8, df: i8, dr: i8) -> Bitboard {
 }
 
 /// Generate all rays, from all squares to all directions.
+///
+/// # Returns
+/// A 64x8 table of rays indexed by square and direction.
 const fn gen_rays() -> [[Bitboard; 8]; 64] {
     let mut rays = [[Bitboard::EMPTY; 8]; 64];
     let mut sq = 0u8;

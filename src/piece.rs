@@ -93,6 +93,12 @@ impl From<PieceOnSquare> for (Color, PieceKind) {
 }
 
 /// Convert a color-specific piece character into `(PieceOnSquare, Color, PieceKind)`, if possible.
+///
+/// # Parameters
+/// - `c`: Piece character from FEN or board notation.
+///
+/// # Returns
+/// `Some((piece, color, kind))` if `c` is valid, otherwise `None`.
 pub(crate) fn parse_piece(c: char) -> Option<(PieceOnSquare, Color, PieceKind)> {
     match c {
         'P' => Some((PieceOnSquare::WhitePawn, Color::White, PieceKind::Pawn)),

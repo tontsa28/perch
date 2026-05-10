@@ -23,6 +23,9 @@ pub(crate) struct Board {
 
 impl Board {
     /// Initialize the board at the standard chess starting position.
+    ///
+    /// # Returns
+    /// A `Board` set to the standard starting position.
     pub(crate) fn new() -> Self {
         // Set all squares to empty
         let mut squares = [PieceOnSquare::Empty; 64];
@@ -81,6 +84,13 @@ impl Board {
     }
 
     /// Get the index of a piece bitboard.
+    ///
+    /// # Parameters
+    /// - `color`: Piece color.
+    /// - `kind`: Piece kind.
+    ///
+    /// # Returns
+    /// Index into `pieces` for the given color and kind.
     #[inline(always)]
     fn bitboard_index(color: Color, kind: PieceKind) -> usize {
         let color_offset = match color {
@@ -91,6 +101,13 @@ impl Board {
     }
 
     /// Get the first blocker on a ray.
+    ///
+    /// # Parameters
+    /// - `ray`: Squares along a single ray from a source square.
+    /// - `increasing`: If `true`, search from LSB upward; otherwise from MSB downward.
+    ///
+    /// # Returns
+    /// The square index of the first blocking piece, or `None` if there is no blocker.
     #[inline(always)]
     fn first_blocker_on_ray(&self, ray: Bitboard, increasing: bool) -> Option<u8> {
         // Compute AND between occupied pieces and ray to find blockers
@@ -106,6 +123,13 @@ impl Board {
     }
 
     /// Check if a square is attacked by a pawn.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `by`: Attacking color.
+    ///
+    /// # Returns
+    /// `true` if a pawn of `by` attacks `target_sq`.
     fn is_attacked_by_pawn(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -121,6 +145,13 @@ impl Board {
     }
 
     /// Check if a square is attacked by a knight.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `by`: Attacking color.
+    ///
+    /// # Returns
+    /// `true` if a knight of `by` attacks `target_sq`.
     fn is_attacked_by_knight(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -133,6 +164,13 @@ impl Board {
     }
 
     /// Check if a square is attacked by a diagonally moving piece (bishop or queen).
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `by`: Attacking color.
+    ///
+    /// # Returns
+    /// `true` if a bishop or queen of `by` attacks `target_sq`.
     fn is_attacked_by_bishop_or_queen(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -163,6 +201,13 @@ impl Board {
     }
 
     /// Check if a square is attacked by an orthogonally moving piece (rook or queen).
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `by`: Attacking color.
+    ///
+    /// # Returns
+    /// `true` if a rook or queen of `by` attacks `target_sq`.
     fn is_attacked_by_rook_or_queen(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -193,6 +238,13 @@ impl Board {
     }
 
     /// Check if a square is attacked by a king.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `by`: Attacking color.
+    ///
+    /// # Returns
+    /// `true` if the king of `by` attacks `target_sq`.
     fn is_attacked_by_king(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -205,11 +257,24 @@ impl Board {
     }
 
     /// Get a piece bitboard by its color and kind.
+    ///
+    /// # Parameters
+    /// - `color`: Piece color.
+    /// - `kind`: Piece kind.
+    ///
+    /// # Returns
+    /// A bitboard containing all pieces of the given color and kind.
     pub(crate) fn piece_bitboard(&self, color: Color, kind: PieceKind) -> Bitboard {
         self.pieces[Self::bitboard_index(color, kind)]
     }
 
     /// Get a color bitboard by its color.
+    ///
+    /// # Parameters
+    /// - `color`: Side to query.
+    ///
+    /// # Returns
+    /// A bitboard containing all pieces of `color`.
     pub(crate) fn color_bitboard(&self, color: Color) -> Bitboard {
         match color {
             Color::White => self.white,
@@ -218,6 +283,12 @@ impl Board {
     }
 
     /// Get the square of a king by its color.
+    ///
+    /// # Parameters
+    /// - `color`: King color.
+    ///
+    /// # Returns
+    /// The square index of the king. Assumes exactly one king of that color.
     pub(crate) fn king_square(&self, color: Color) -> u8 {
         let king = self.piece_bitboard(color, PieceKind::King);
 
@@ -229,6 +300,13 @@ impl Board {
     }
 
     /// Check if a square is attacked.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `by`: Attacking color.
+    ///
+    /// # Returns
+    /// `true` if any piece of `by` attacks `target_sq`.
     pub(crate) fn is_square_attacked(&self, target_sq: u8, by: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -240,6 +318,12 @@ impl Board {
     }
 
     /// Check if a square is empty.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    ///
+    /// # Returns
+    /// `true` if the square is empty.
     pub(crate) fn is_empty(&self, target_sq: u8) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -251,6 +335,13 @@ impl Board {
     }
 
     /// Check if a square contains a friendly piece.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `color`: Perspective color.
+    ///
+    /// # Returns
+    /// `true` if the square contains a piece of `color`.
     pub(crate) fn has_friend(&self, target_sq: u8, color: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -262,6 +353,13 @@ impl Board {
     }
 
     /// Check if a square contains an enemy piece.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to test.
+    /// - `color`: Perspective color.
+    ///
+    /// # Returns
+    /// `true` if the square contains a piece of the opposite color.
     pub(crate) fn has_enemy(&self, target_sq: u8, color: Color) -> bool {
         debug_assert!(target_sq < 64);
 
@@ -272,7 +370,13 @@ impl Board {
         (self.color_bitboard(!color) & mask).is_not_empty()
     }
 
-    /// Check if white or black has material beyond pawns and a king.
+    /// Check if a side has material beyond pawns and a king.
+    ///
+    /// # Parameters
+    /// - `color`: Side to test.
+    ///
+    /// # Returns
+    /// `true` if the side has any minor or major pieces.
     pub(crate) fn has_non_pawns(&self, color: Color) -> bool {
         match color {
             Color::White => {
@@ -285,6 +389,12 @@ impl Board {
     }
 
     /// Get the piece on a square.
+    ///
+    /// # Parameters
+    /// - `target_sq`: Square to read.
+    ///
+    /// # Returns
+    /// The piece occupying `target_sq`, or `PieceOnSquare::Empty`.
     pub(crate) fn piece_at(&self, target_sq: u8) -> PieceOnSquare {
         debug_assert!(target_sq < 64);
 
@@ -292,6 +402,14 @@ impl Board {
     }
 
     /// Remove a piece from the board.
+    ///
+    /// # Parameters
+    /// - `color`: Color of the piece to remove.
+    /// - `kind`: Kind of the piece to remove.
+    /// - `target_sq`: Square to clear.
+    ///
+    /// # Returns
+    /// Nothing.
     pub(crate) fn remove_piece(&mut self, color: Color, kind: PieceKind, target_sq: u8) {
         debug_assert!(target_sq < 64);
 
@@ -314,6 +432,14 @@ impl Board {
     }
 
     /// Add a piece to the board.
+    ///
+    /// # Parameters
+    /// - `color`: Color of the piece to add.
+    /// - `kind`: Kind of the piece to add.
+    /// - `target_sq`: Destination square.
+    ///
+    /// # Returns
+    /// Nothing.
     pub(crate) fn add_piece(&mut self, color: Color, kind: PieceKind, target_sq: u8) {
         debug_assert!(target_sq < 64);
 
@@ -336,6 +462,9 @@ impl Board {
     }
 
     /// Evaluate the board based on material and piece-square tables (PSTs).
+    ///
+    /// # Returns
+    /// A score in centipawns from White's perspective.
     pub(crate) fn evaluate_material_pst(&self) -> i32 {
         // Construct numerical piece values, phase weights and phase window size
         const VALUES: [i32; 6] = [100, 320, 330, 500, 900, 0];
@@ -397,9 +526,14 @@ impl Board {
 impl TryFrom<&str> for Board {
     type Error = Error;
 
-    /// Convert the board part of a FEN string
-    /// (e.g. `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR`)
-    /// into `Board`.
+    /// Convert the board part of a FEN string into `Board`.
+    ///
+    /// # Parameters
+    /// - `pos`: Piece placement field from a FEN string
+    ///   (e.g. `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR`).
+    ///
+    /// # Returns
+    /// A `Board` constructed from `pos`, or an error if parsing fails.
     fn try_from(pos: &str) -> Result<Self, Self::Error> {
         // Process ranks from left to right (files a-h), starting from 8th rank
         let mut rank: u8 = 7;
@@ -456,6 +590,12 @@ impl TryFrom<&str> for Board {
 
 impl Display for Board {
     /// Display the `Board` as an ASCII chessboard.
+    ///
+    /// # Parameters
+    /// - `f`: Formatter sink.
+    ///
+    /// # Returns
+    /// A formatting result.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         const BORDER: &str = "+---+---+---+---+---+---+---+---+";
 
@@ -502,6 +642,12 @@ impl TryFrom<&str> for Color {
     type Error = Error;
 
     /// Convert a color string into `Color`.
+    ///
+    /// # Parameters
+    /// - `value`: Color character (`"w"` or `"b"`).
+    ///
+    /// # Returns
+    /// The parsed `Color`, or an error for invalid input.
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "w" => Ok(Self::White),

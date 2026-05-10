@@ -7,6 +7,13 @@ const INF: i32 = 1_073_741_824;
 const MATE: i32 = 536_870_912;
 
 /// Run a search up to the given depth in the given position.
+///
+/// # Parameters
+/// - `pos`: Position to search (mutated during search and restored).
+/// - `depth`: Maximum search depth in plies.
+///
+/// # Returns
+/// The best move found, or `None` if no legal moves exist.
 pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move> {
     // Root moves are generated once; each iteration reorders them using TT
     // which currently stores just best moves, not scores
@@ -78,6 +85,18 @@ pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move>
 }
 
 /// Search a position recursively up to the given depth using the negamax algorithm.
+///
+/// # Parameters
+/// - `pos`: Position to search (mutated during search and restored).
+/// - `depth`: Remaining depth in plies.
+/// - `alpha`: Lower bound of the alpha-beta window.
+/// - `beta`: Upper bound of the alpha-beta window.
+/// - `ply`: Distance from the root in plies.
+/// - `tt`: Transposition table used for move ordering.
+/// - `last_was_null`: Whether the previous move was a null move.
+///
+/// # Returns
+/// The score from the side-to-move perspective.
 fn search(
     pos: &mut Position,
     depth: u8,
@@ -180,6 +199,15 @@ fn search(
 }
 
 /// Perform a quiescence search on the given position.
+///
+/// # Parameters
+/// - `pos`: Position to search (mutated during search and restored).
+/// - `alpha`: Lower bound of the alpha-beta window.
+/// - `beta`: Upper bound of the alpha-beta window.
+/// - `ply`: Distance from the root in plies.
+///
+/// # Returns
+/// The quiescence score from the side-to-move perspective.
 fn quiescence(pos: &mut Position, mut alpha: i32, beta: i32, ply: i32) -> i32 {
     let in_check = pos.is_check(pos.turn());
 
@@ -248,6 +276,13 @@ fn quiescence(pos: &mut Position, mut alpha: i32, beta: i32, ply: i32) -> i32 {
 }
 
 /// Count the number of reachable nodes up to the given depth.
+///
+/// # Parameters
+/// - `pos`: Position to expand (mutated during traversal and restored).
+/// - `depth`: Remaining depth in plies.
+///
+/// # Returns
+/// Total node count at the given depth.
 pub(crate) fn perft(pos: &mut Position, depth: u8) -> usize {
     // If requested depth is reached, return node count (always 1 for an individual position)
     if depth == 0 {

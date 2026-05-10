@@ -8,12 +8,24 @@ pub(crate) struct Bitboard(u64);
 impl Bitboard {
     pub(crate) const EMPTY: Self = Self(0);
 
-    /// Create a new bitboard from an unsigned 64-bit integer.
+    /// Create a new bitboard from a raw 64-bit mask.
+    ///
+    /// # Parameters
+    /// - `bb`: Raw mask where bit 0 is a1 and bit 63 is h8.
+    ///
+    /// # Returns
+    /// A `Bitboard` wrapping `bb`.
     pub(crate) const fn new(bb: u64) -> Self {
         Bitboard(bb)
     }
 
-    /// Check if there is a piece on the given square.
+    /// Check if a bit is set on the given square.
+    ///
+    /// # Parameters
+    /// - `sq`: Square index in the range 0..64.
+    ///
+    /// # Returns
+    /// `true` if the bit at `sq` is set.
     #[inline(always)]
     pub(crate) fn bit_is_set(self, sq: u8) -> bool {
         // Right shift bitboard integer sq times (so that square bit becomes LSB),
@@ -21,21 +33,30 @@ impl Bitboard {
         ((self.0 >> sq) & 1) != 0
     }
 
-    /// Get the square with the smallest index.
+    /// Get the square with the smallest index (LSB).
+    ///
+    /// # Returns
+    /// The index of the least significant set bit. The bitboard must be non-empty.
     #[inline(always)]
     pub(crate) fn lsb_sq(self) -> u8 {
         // Count trailing zeros to get LSB square
         self.0.trailing_zeros() as u8
     }
 
-    /// Get the square with the largest index.
+    /// Get the square with the largest index (MSB).
+    ///
+    /// # Returns
+    /// The index of the most significant set bit. The bitboard must be non-empty.
     #[inline(always)]
     pub(crate) fn msb_sq(self) -> u8 {
         // Count leading zeros to get MSB square
         (63 - self.0.leading_zeros()) as u8
     }
 
-    /// Pop the LSB of the bitboard.
+    /// Pop the least significant set bit from the bitboard.
+    ///
+    /// # Returns
+    /// The index of the removed bit. The bitboard must be non-empty.
     #[inline(always)]
     pub(crate) fn pop_lsb(&mut self) -> u8 {
         // Get LSB square, then remove it
@@ -45,19 +66,28 @@ impl Bitboard {
         sq
     }
 
-    /// Returns `true` if the bitboard contains no pieces.
+    /// Check whether this bitboard is empty.
+    ///
+    /// # Returns
+    /// `true` if the bitboard contains no set bits.
     #[inline(always)]
     pub(crate) fn is_empty(self) -> bool {
         self.0 == 0
     }
 
-    /// Returns `true` if the bitboard contains one or more pieces.
+    /// Check whether this bitboard is non-empty.
+    ///
+    /// # Returns
+    /// `true` if the bitboard contains one or more set bits.
     #[inline(always)]
     pub(crate) fn is_not_empty(self) -> bool {
         self.0 != 0
     }
 
-    /// Returns the number of set bits in this bitboard.
+    /// Count the number of set bits in this bitboard.
+    ///
+    /// # Returns
+    /// The number of set bits.
     #[inline(always)]
     pub(crate) fn count_ones(self) -> u32 {
         self.0.count_ones()

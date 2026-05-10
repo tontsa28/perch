@@ -28,6 +28,9 @@ impl Position {
     const BQ: u8 = 1 << 3;
 
     /// Initialize the standard chess starting position.
+    ///
+    /// # Returns
+    /// A `Position` set to the standard starting position.
     pub(crate) fn new() -> Self {
         Self {
             board: Board::new(),
@@ -40,6 +43,13 @@ impl Position {
     }
 
     /// Convert a file-rank pair into a square.
+    ///
+    /// # Parameters
+    /// - `file`: File index (0..7).
+    /// - `rank`: Rank index (0..7).
+    ///
+    /// # Returns
+    /// The square index, or `None` if out of bounds.
     #[inline(always)]
     fn sq(file: i8, rank: i8) -> Option<u8> {
         if file >= 0 && file < 8 && rank >= 0 && rank < 8 {
@@ -50,12 +60,27 @@ impl Position {
     }
 
     /// Convert a square into a file-rank pair.
+    ///
+    /// # Parameters
+    /// - `sq`: Square index in the range 0..64.
+    ///
+    /// # Returns
+    /// A `(file, rank)` pair.
     #[inline(always)]
     fn file_rank(sq: u8) -> (i8, i8) {
         ((sq % 8) as i8, (sq / 8) as i8)
     }
 
     /// Push promotion moves into the move buffer.
+    ///
+    /// # Parameters
+    /// - `moves`: Move buffer to append to.
+    /// - `from`: Origin square.
+    /// - `to`: Destination square.
+    /// - `is_en_passant`: Whether the move is flagged as en passant.
+    ///
+    /// # Returns
+    /// Nothing.
     #[inline(always)]
     fn push_promotion_set(moves: &mut Vec<Move>, from: u8, to: u8, is_en_passant: bool) {
         for promo in [
@@ -76,6 +101,9 @@ impl Position {
     }
 
     /// Check if we can castle kingside.
+    ///
+    /// # Returns
+    /// `true` if the side to move still has kingside castling rights.
     fn can_castle_kingside(&self) -> bool {
         // Compute AND between castling rights and kingside castling right
         // to find if move is still legal to play
@@ -86,6 +114,9 @@ impl Position {
     }
 
     /// Check if we can castle queenside.
+    ///
+    /// # Returns
+    /// `true` if the side to move still has queenside castling rights.
     fn can_castle_queenside(&self) -> bool {
         // Compute AND between castling rights and queenside castling right
         // to find if move is still legal to play
@@ -96,6 +127,15 @@ impl Position {
     }
 
     /// Generate all slider moves (bishop + rook + queen).
+    ///
+    /// # Parameters
+    /// - `color`: Color whose pieces are moved.
+    /// - `bb`: Bitboard of sliding pieces.
+    /// - `directions`: Direction vectors to step along.
+    /// - `moves`: Move buffer to append to.
+    ///
+    /// # Returns
+    /// Nothing. Generated moves are appended to `moves`.
     fn gen_slider_moves(
         &self,
         color: Color,
@@ -143,6 +183,13 @@ impl Position {
     }
 
     /// Generate all pawn moves.
+    ///
+    /// # Parameters
+    /// - `color`: Color whose pawns are moved.
+    /// - `moves`: Move buffer to append to.
+    ///
+    /// # Returns
+    /// Nothing. Generated moves are appended to `moves`.
     fn gen_pawn_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let mut pawns = self.board.piece_bitboard(color, PieceKind::Pawn);
 
@@ -235,6 +282,13 @@ impl Position {
     }
 
     /// Generate all knight moves.
+    ///
+    /// # Parameters
+    /// - `color`: Color whose knights are moved.
+    /// - `moves`: Move buffer to append to.
+    ///
+    /// # Returns
+    /// Nothing. Generated moves are appended to `moves`.
     fn gen_knight_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let mut knights = self.board.piece_bitboard(color, PieceKind::Knight);
 
@@ -277,6 +331,13 @@ impl Position {
     }
 
     /// Generate all bishop moves.
+    ///
+    /// # Parameters
+    /// - `color`: Color whose bishops are moved.
+    /// - `moves`: Move buffer to append to.
+    ///
+    /// # Returns
+    /// Nothing. Generated moves are appended to `moves`.
     fn gen_bishop_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let bishops = self.board.piece_bitboard(color, PieceKind::Bishop);
 
@@ -287,6 +348,13 @@ impl Position {
     }
 
     /// Generate all rook moves.
+    ///
+    /// # Parameters
+    /// - `color`: Color whose rooks are moved.
+    /// - `moves`: Move buffer to append to.
+    ///
+    /// # Returns
+    /// Nothing. Generated moves are appended to `moves`.
     fn gen_rook_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let rooks = self.board.piece_bitboard(color, PieceKind::Rook);
 
@@ -297,6 +365,13 @@ impl Position {
     }
 
     /// Generate all queen moves.
+    ///
+    /// # Parameters
+    /// - `color`: Color whose queens are moved.
+    /// - `moves`: Move buffer to append to.
+    ///
+    /// # Returns
+    /// Nothing. Generated moves are appended to `moves`.
     fn gen_queen_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let queens = self.board.piece_bitboard(color, PieceKind::Queen);
 
@@ -316,6 +391,13 @@ impl Position {
     }
 
     /// Generate all king moves.
+    ///
+    /// # Parameters
+    /// - `color`: Color whose king is moved.
+    /// - `moves`: Move buffer to append to.
+    ///
+    /// # Returns
+    /// Nothing. Generated moves are appended to `moves`.
     fn gen_king_moves(&self, color: Color, moves: &mut Vec<Move>) {
         let king = self.board.piece_bitboard(color, PieceKind::King);
 
@@ -450,6 +532,9 @@ impl Position {
     }
 
     /// Generate all pseudo-legal moves (ignoring checks).
+    ///
+    /// # Returns
+    /// A vector of pseudo-legal moves for the side to move.
     fn pseudo_legal_moves(&self) -> Vec<Move> {
         // Preallocate memory for 64 moves to avoid allocation overhead
         let mut moves = Vec::with_capacity(64);
@@ -465,16 +550,28 @@ impl Position {
     }
 
     /// Get a reference to the associated `Board`.
+    ///
+    /// # Returns
+    /// A shared reference to the underlying `Board`.
     pub(crate) fn board(&self) -> &Board {
         &self.board
     }
 
     /// Check whose turn it is.
+    ///
+    /// # Returns
+    /// The side to move.
     pub(crate) fn turn(&self) -> Color {
         self.turn
     }
 
     /// Check if the king is in check.
+    ///
+    /// # Parameters
+    /// - `color`: Side whose king is tested.
+    ///
+    /// # Returns
+    /// `true` if the king of `color` is in check.
     pub(crate) fn is_check(&self, color: Color) -> bool {
         // Checker is always our opponent
         let attacker = !color;
@@ -484,6 +581,12 @@ impl Position {
     }
 
     /// Play a move in the current position.
+    ///
+    /// # Parameters
+    /// - `mv`: Move to make.
+    ///
+    /// # Returns
+    /// An `Undo` record that can restore the position.
     pub(crate) fn make_move(&mut self, mv: Move) -> Undo {
         // Gather all information required to restore this position
         let us = self.turn;
@@ -637,6 +740,13 @@ impl Position {
     }
 
     /// Restore the position after a move.
+    ///
+    /// # Parameters
+    /// - `mv`: Move that was made.
+    /// - `undo`: Undo record returned by `make_move`.
+    ///
+    /// # Returns
+    /// Nothing.
     pub(crate) fn unmake_move(&mut self, mv: Move, undo: Undo) {
         self.turn = !self.turn;
         let us = self.turn;
@@ -695,6 +805,9 @@ impl Position {
     }
 
     /// Play a null move in the current position.
+    ///
+    /// # Returns
+    /// The previous en passant square, if any.
     pub(crate) fn make_null_move(&mut self) -> Option<u8> {
         let ep = self.en_passant;
         self.en_passant = None;
@@ -703,12 +816,21 @@ impl Position {
     }
 
     /// Restore the position after a null move.
+    ///
+    /// # Parameters
+    /// - `ep`: En passant square returned by `make_null_move`.
+    ///
+    /// # Returns
+    /// Nothing.
     pub(crate) fn unmake_null_move(&mut self, ep: Option<u8>) {
         self.turn = !self.turn;
         self.en_passant = ep;
     }
 
     /// Generate all legal moves in the current position.
+    ///
+    /// # Returns
+    /// A vector of legal moves for the side to move.
     pub(crate) fn legal_moves(&mut self) -> Vec<Move> {
         // Preallocate memory for 64 moves to avoid allocation overhead
         let mut moves = Vec::with_capacity(64);
@@ -748,6 +870,9 @@ impl Position {
     }
 
     /// Convert the evaluation to the side-to-move perspective.
+    ///
+    /// # Returns
+    /// Evaluation score in centipawns from the side-to-move perspective.
     pub(crate) fn evaluate(&self) -> i32 {
         match self.turn {
             Color::White => self.board.evaluate_material_pst(),
@@ -756,6 +881,12 @@ impl Position {
     }
 
     /// Convert a UCI-formatted move string into `Move` if it is legal in the current position.
+    ///
+    /// # Parameters
+    /// - `s`: UCI move string to parse.
+    ///
+    /// # Returns
+    /// A legal `Move`, or an error if parsing fails or the move is illegal.
     pub(crate) fn parse_uci_move(&mut self, s: &str) -> Result<Move> {
         let raw = Move::try_from(s)?;
 
@@ -767,6 +898,12 @@ impl Position {
     }
 
     /// Check if a `Move` is a capture in the current position.
+    ///
+    /// # Parameters
+    /// - `mv`: Move to test.
+    ///
+    /// # Returns
+    /// `true` if `mv` captures an enemy piece (including en passant).
     pub(crate) fn is_capture(&self, mv: Move) -> bool {
         mv.is_en_passant || self.board.has_enemy(mv.to, self.turn)
     }
@@ -776,6 +913,12 @@ impl TryFrom<&str> for Position {
     type Error = Error;
 
     /// Convert a FEN string into `Position`.
+    ///
+    /// # Parameters
+    /// - `value`: Full FEN string.
+    ///
+    /// # Returns
+    /// A parsed `Position`, or an error if the FEN is invalid.
     fn try_from(value: &str) -> StdResult<Self, Self::Error> {
         let parts: Vec<&str> = value.split_whitespace().collect();
         let pos_str = *parts.first().unwrap();
