@@ -15,6 +15,8 @@ Käydään nämä tiedostot lyhyesti läpi:
 - **search.rs**: Sisältää varsinaisen hakualgoritmin (negamax) toteutuksen optimointeineen. Algoritmia käytetään parhaan siirron etsimiseen annetussa positiossa.
 - **uci.rs**: Sisältää UCI-käyttöliittymää esittävän `Uci`-rakenteen. Rakenne on vastuussa käyttäjän kirjoittamien komentojen käsittelystä ja ajaa niiden perusteella eri pääfunktioita. Esimerkiksi go-komento ajaa `iterative_deepening()`-funktion, joka suorittaa parhaan siirron haun.
 
+---
+
 ## Aika- ja tilavaativuus + käytännön suorituskyky
 Hakualgoritmin aikavaativuus on huonoimmassa tapauksessa $O(b^d)$, missä $b$ on keskimääräinen haarautumiskerroin (laillisia siirtoja positiota kohden) ja $d$ on hakusyvyys.
 Käytännössä tämä tarkoittaa sitä, että algoritmin suoritusaika kasvaa eksponentiaalisesti hakusyvyyden kasvaessa.
@@ -25,6 +27,8 @@ Haun teoreettinen aikavaativuus ei kuitenkaan vastaa todellisuutta.
 Käytännössä alfa-beeta-karsinnan ja muiden optimointien ansiosta haku on paljon huonointa tapausta nopeampi, koska karsintaa tehdään ainakin vähän melkein jokaisessa positiossa.
 On varmasti olemassa keinotekoisia positioita, joissa karsintaa ei voi tapahtua, mutta tällaisen löytäminen sattumalta lienee miltei mahdotonta.
 
+---
+
 ## Mahdolliset puutteet ja parannusehdotukset
 Vaikka ohjelma saavuttaa jo kohtuullisia hakusyvyyksiä ja positioiden evaluointi toimii melko hyvin, parannettavaa on vielä paljon.
 Muun muassa siirtojen generointia voisi vielä nopeuttaa: esimerkiksi aloitusasemasta 7 siirron syvyyteen asti kaikkien solmujen luominen kestää noin 70 sekuntia, mutta maailman johtava shakkimoottori, Stockfish, tekee saman alle 20 sekunnissa (nämä mitattu tietysti samalla tietokoneella).
@@ -33,11 +37,15 @@ Esimerkiksi transpositiotaulun voisi toteuttaa uudelleen omalla tietorakenteella
 Nykyään maailman johtavat shakkimoottorit hyödyntävät myös neuroverkkoja, mutta itse tuskin lähden sellaista tähän projektiin ikinä toteuttamaan.
 Näiden lisäksi on varmasti paljon muitakin optimointeja, joista en ole vielä tietoinen.
 
+---
+
 ## Laajojen kielimallien käyttö
 Olen käyttänyt projektin aikana kolmea eri kielimallia, jotka ovat Claude Sonnet 4.6, GPT-5.2-Codex sekä GPT-5.3-Codex.
 Käytin kielimalleja ymmärtämään projektin eri osa-alueiden toimintaa paremmin.
 Niistä oli myös hyötyä alkuun pääsemisessä, koska lähtökohta oli se, että en tiennyt shakkimoottorin toiminnasta juuri mitään.
 Vaikka kielimallit ovat olleet osana koodin ideointia, kaikki koodi on kuitenkin viime kädessä itse kirjoitettua.
+
+---
 
 ## Työssä käytetyt lähteet
 Päälähteenä on toiminut [chessprogramming.org](https://www.chessprogramming.org).
