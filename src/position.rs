@@ -1003,6 +1003,18 @@ mod tests {
         assert_eq!(perft(&mut p, 3), before);
     }
 
+    #[test]
+    fn parse_uci_move_accepts_legal_move() {
+        let mut p = Position::new();
+        assert!(p.parse_uci_move("e2e4").is_ok());
+    }
+
+    #[test]
+    fn parse_uci_move_rejects_illegal_move() {
+        let mut p = Position::new();
+        assert!(p.parse_uci_move("e2e5").is_err());
+    }
+
     // ── Terminal positions ────────────────────────────────────────────────────
 
     #[test]
@@ -1056,14 +1068,37 @@ mod tests {
         let mv = p.parse_uci_move("a1a2").unwrap();
         p.make_move(mv);
 
-        // Flip back to White to inspect castling options
-        let ep = p.make_null_move();
+        // Make a black move so it's White to move again
+        let reply = p.parse_uci_move("a8a7").unwrap();
+        p.make_move(reply);
+
         let moves = p.legal_moves();
 
         assert!(!moves.iter().any(|m| m.is_castle_queenside));
         assert!(moves.iter().any(|m| m.is_castle_kingside));
+    }
 
-        p.unmake_null_move(ep);
+    #[test]
+    fn king_move_removes_castling_rights_even_if_king_returns() {
+        let mut p = pos("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+
+        // Move king away and back
+        let mv1 = p.parse_uci_move("e1e2").unwrap();
+        p.make_move(mv1);
+        let mv2 = p.parse_uci_move("a8a7").unwrap();
+        p.make_move(mv2);
+        let mv3 = p.parse_uci_move("e2e1").unwrap();
+        p.make_move(mv3);
+        let mv4 = p.parse_uci_move("h8h7").unwrap();
+        p.make_move(mv4);
+
+        // Castling should be permanently lost for White
+        let moves = p.legal_moves();
+        assert!(
+            !moves
+                .iter()
+                .any(|m| m.is_castle_kingside || m.is_castle_queenside)
+        );
     }
 
     // ── En passant ────────────────────────────────────────────────────────────
