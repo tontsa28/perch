@@ -706,4 +706,29 @@ mod tests {
         let b = board("k7/8/8/8/p7/8/8/R7");
         assert!(!b.is_square_attacked(56, Color::White));
     }
+
+    #[test]
+    fn kiwipete_evaluation_is_correct() {
+        assert_eq!(
+            board("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R")
+                .evaluate_material_pst(),
+            56
+        );
+    }
+
+    #[test]
+    fn position3_evaluation_is_correct() {
+        assert_eq!(
+            board("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8").evaluate_material_pst(),
+            37
+        );
+    }
+
+    #[test]
+    fn position5_evaluation_is_correct() {
+        assert_eq!(
+            board("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R").evaluate_material_pst(),
+            34
+        );
+    }
 }
