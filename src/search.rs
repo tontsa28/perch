@@ -6,7 +6,7 @@ use crate::{mov::Move, piece::PieceKind, position::Position};
 const INF: i32 = 1_073_741_824;
 const MATE: i32 = 536_870_912;
 
-/// Run a search up to the given depth in the given position.
+/// Run a search up to the given depth in the given position using iterative deepening.
 ///
 /// # Parameters
 /// - `pos`: Position to search (mutated during search and restored).
@@ -17,64 +17,17 @@ const MATE: i32 = 536_870_912;
 pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move> {
     // Root moves are generated once; each iteration reorders them using TT
     // which currently stores just best moves, not scores
-    let mut best_move = None;
-    let mut moves = pos.legal_moves();
     let mut tt: HashMap<Position, Move> = HashMap::new();
+    let mut best_move = None;
 
     // Search position up to depth d iteratively
     for d in 1..=depth {
-        // Set best score to negative infinity and get TT move if one exists
-        let mut best_score = -INF;
-        let tt_move = tt.get(pos);
-
-        // Improve move order
-        moves.sort_by_key(|m| {
-            if Some(m) == tt_move {
-                // TT move gets highest priority
-                0
-            } else if m.is_promotion() {
-                // Promotions are checked after TT move
-                1
-            } else if pos.is_capture(*m) {
-                // Get attacker and victim of capture
-                let (_, attacker) = pos.board().piece_at(m.from).into();
-                let victim = if m.is_en_passant {
-                    PieceKind::Pawn
-                } else {
-                    let (_, v) = pos.board().piece_at(m.to).into();
-                    v
-                };
-
-                // Captures are ordered from most to least valuable
-                100 - MVV_LVA[victim as usize][attacker as usize] as i32
-            } else {
-                // Other moves get lowest priority
-                200
-            }
-        });
-
-        for mv in moves.iter().copied() {
-            // Play a move and search its branch using negamax;
-            // child score is negated and window is flipped
-            let undo = pos.make_move(mv);
-            let score = -search(pos, d - 1, -INF, -best_score, 1, &mut tt, false);
-            pos.unmake_move(mv, undo);
-
-            // If a new best score is found, set its move as best move
-            if score > best_score {
-                best_score = score;
-                best_move = Some(mv);
-            }
-        }
-
-        // If a best move was found, insert it into TT
-        if let Some(mv) = best_move {
-            tt.insert(*pos, mv);
-        }
+        let (mv, score) = search_root(pos, d, &mut tt);
+        best_move = mv;
 
         // Log findings of this iteration
         println!(
-            "info depth {d} score cp {best_score} pv {}",
+            "info depth {d} score cp {score} pv {}",
             best_move
                 .map(|mv| mv.to_string())
                 .unwrap_or(String::from("0000"))
@@ -82,6 +35,87 @@ pub(crate) fn iterative_deepening(pos: &mut Position, depth: u8) -> Option<Move>
     }
 
     best_move
+}
+
+/// Search the root node at a fixed depth.
+///
+/// # Parameters
+/// - `pos`: Position to search (mutated during search and restored).
+/// - `depth`: Maximum search depth in plies.
+/// - `tt`: Transposition table used for move ordering.
+///
+/// # Returns
+/// A tuple containing:
+/// - The best move found, or `None` if no legal moves exist.
+/// - The score from the side-to-move perspective.
+fn search_root(
+    pos: &mut Position,
+    depth: u8,
+    tt: &mut HashMap<Position, Move>,
+) -> (Option<Move>, i32) {
+    // Generate legal moves and check if there are any
+    let mut moves = pos.legal_moves();
+    if moves.is_empty() {
+        // If side-to-move is in check, return mate score
+        if pos.is_check(pos.turn()) {
+            return (None, -MATE);
+        } else {
+            return (None, 0);
+        }
+    }
+
+    // Set best score to negative infinity and get TT move if one exists
+    let tt_move = tt.get(pos);
+
+    // Improve move order
+    moves.sort_by_key(|m| {
+        if Some(m) == tt_move {
+            // TT move gets highest priority
+            0
+        } else if m.is_promotion() {
+            // Promotions are checked after TT move
+            1
+        } else if pos.is_capture(*m) {
+            // Get attacker and victim of capture
+            let (_, attacker) = pos.board().piece_at(m.from).into();
+            let victim = if m.is_en_passant {
+                PieceKind::Pawn
+            } else {
+                let (_, v) = pos.board().piece_at(m.to).into();
+                v
+            };
+
+            // Captures are ordered from most to least valuable
+            100 - MVV_LVA[victim as usize][attacker as usize] as i32
+        } else {
+            // Other moves get lowest priority
+            200
+        }
+    });
+
+    let mut best_move = None;
+    let mut best_score = -INF;
+
+    for mv in moves.iter().copied() {
+        // Play a move and search its branch using negamax;
+        // child score is negated and window is flipped
+        let undo = pos.make_move(mv);
+        let score = -search(pos, depth - 1, -INF, -best_score, 1, tt, false);
+        pos.unmake_move(mv, undo);
+
+        // If a new best score is found, set its move as best move
+        if score > best_score {
+            best_score = score;
+            best_move = Some(mv);
+        }
+    }
+
+    // Store the root best move so the next iteration can try it first.
+    if let Some(mv) = best_move {
+        tt.insert(*pos, mv);
+    }
+
+    (best_move, best_score)
 }
 
 /// Search a position recursively up to the given depth using the negamax algorithm.
