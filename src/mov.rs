@@ -187,7 +187,9 @@ pub(crate) struct Undo {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::piece::PieceKind;
+
+    use super::Move;
 
     #[test]
     fn parse_simple_move() {

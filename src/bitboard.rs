@@ -132,7 +132,7 @@ impl BitOrAssign for Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Bitboard;
 
     #[test]
     fn bit_is_set_and_empty_flags() {

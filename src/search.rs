@@ -343,3 +343,99 @@ const MVV_LVA: [[u8; 6]; 6] = [
     [55, 54, 53, 52, 51, 50],
     [65, 64, 63, 62, 61, 60],
 ];
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::{MATE, search_root};
+    use crate::{mov::Move, position::Position};
+
+    fn pos(fen: &str) -> Position {
+        Position::try_from(fen).expect("valid FEN")
+    }
+
+    #[test]
+    fn mate1_is_found() {
+        // Define a position with a mate at depth 1
+        let mut pos = pos("rnb2rk1/pp4pp/2q2b2/8/1P5n/P1NB2P1/1B2NP1P/R2Q1RK1 b - - 3 18");
+        let mut tt: HashMap<Position, Move> = HashMap::new();
+
+        // Mate should be found at depth 1
+        assert_eq!(
+            search_root(&mut pos, 1, &mut tt),
+            (Some(Move::try_from("c6g2").expect("valid move")), MATE - 1)
+        );
+        tt.clear();
+
+        // Mate should be found at depth 3
+        assert_eq!(
+            search_root(&mut pos, 3, &mut tt),
+            (Some(Move::try_from("c6g2").expect("valid move")), MATE - 1)
+        );
+        tt.clear();
+
+        // Mate should be found at depth 5
+        assert_eq!(
+            search_root(&mut pos, 5, &mut tt),
+            (Some(Move::try_from("c6g2").expect("valid move")), MATE - 1)
+        );
+        tt.clear();
+    }
+
+    #[test]
+    fn mate3_is_found() {
+        // Define a position with a mate at depth 3
+        let mut pos = pos("3R4/pQ3p1k/5np1/2p1r2n/8/2N1q3/PP4PP/5R1K b - - 2 26");
+        let mut tt: HashMap<Position, Move> = HashMap::new();
+
+        // Mate should NOT be found at depth 1
+        assert_ne!(
+            search_root(&mut pos, 1, &mut tt),
+            (Some(Move::try_from("h5g3").expect("valid move")), MATE - 3)
+        );
+        tt.clear();
+
+        // Mate should be found at depth 3
+        assert_eq!(
+            search_root(&mut pos, 3, &mut tt),
+            (Some(Move::try_from("h5g3").expect("valid move")), MATE - 3)
+        );
+        tt.clear();
+
+        // Mate should be found at depth 5
+        assert_eq!(
+            search_root(&mut pos, 5, &mut tt),
+            (Some(Move::try_from("h5g3").expect("valid move")), MATE - 3)
+        );
+        tt.clear();
+    }
+
+    #[test]
+    fn mate5_is_found() {
+        // Define a position with a mate at depth 5
+        let mut pos = pos("r2q2nr/2pp2bk/bp4pp/p4P2/2QpP3/8/PPP3PP/RNB2RK1 w - - 1 15");
+        let mut tt: HashMap<Position, Move> = HashMap::new();
+
+        // Mate should NOT be found at depth 1
+        assert_ne!(
+            search_root(&mut pos, 1, &mut tt),
+            (Some(Move::try_from("f5g6").expect("valid move")), MATE - 5)
+        );
+        tt.clear();
+
+        // Mate should NOT be found at depth 3
+        assert_ne!(
+            search_root(&mut pos, 3, &mut tt),
+            (Some(Move::try_from("f5g6").expect("valid move")), MATE - 5)
+        );
+        tt.clear();
+
+        // Mate should be found at depth 5
+        assert_eq!(
+            search_root(&mut pos, 5, &mut tt),
+            (Some(Move::try_from("f5g6").expect("valid move")), MATE - 5)
+        );
+        tt.clear();
+    }
+}

@@ -659,7 +659,7 @@ impl TryFrom<&str> for Color {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{Board, Color};
 
     fn board(piece_placement: &str) -> Board {
         Board::try_from(piece_placement).expect("valid piece placement")

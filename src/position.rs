@@ -969,8 +969,8 @@ impl TryFrom<&str> for Position {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::search::perft;
+    use super::Position;
+    use crate::{board::Color, search::perft};
 
     fn pos(fen: &str) -> Position {
         Position::try_from(fen).expect("valid FEN")
@@ -1173,7 +1173,10 @@ mod tests {
     // ── Perft ─────────────────────────────────────────────────────────────────
 
     mod perft_tests {
-        use super::*;
+        use crate::{
+            position::{Position, tests::pos},
+            search::perft,
+        };
 
         #[test]
         fn startpos_depth_1() {
